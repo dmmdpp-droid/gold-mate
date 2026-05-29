@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="theme-color" content="#F6F3EE"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="黄金换算助手"/>
+<link rel="apple-touch-icon" sizes="192x192" href="icon-gold-192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="icon-gold-512.png"/>
+<title>黄金换算助手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+SC:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+:root {
+  --paper:   #F6F3EE;
+  --ink:     #111010;
+  --ink2:    #3A3835;
+  --rule:    #C8C4BC;
+  --rule2:   #DDD9D3;
+  --ghost:   #E8E4DE;
+  --muted:   #9A9590;
+  --up:      #D43A35;    /* 涨：深红 */
+  --dn:      #1B5E20;    /* 跌：深绿 */
+  --gold:    #9A7B2F;
+  --intl-price: #D43A35;   /* 国际金价：朱红橙 */
+  --cn-price:   #2B160B;   /* 国内金价：深棕黑 */
+  --bebas:   "Bebas Neue", "Arial Narrow", sans-serif;
+  --serif:   "Crimson Pro", Georgia, serif;
+  --sans:    "Noto Sans SC", sans-serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100svh;
+  font-family: var(--serif);
+}
+
+/* ═══════════════════════════
+   MASTHEAD
+═══════════════════════════ */
+.masthead {
+  width: 100%;
+  max-width: 480px;
+  padding: max(env(safe-area-inset-top), 20px) 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.masthead-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.masthead-title {
+  font-family: var(--bebas);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55vw;
+}
+
+.masthead-right {
+  display: flex;
+  align-items: center;
+}
+
+.masthead-date {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 400;
+  color: #5C4510;
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
+
+.masthead-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.masthead-sub {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--serif);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background .4s;
+}
+.live-dot.on { background: var(--up); }
+
+/* ═══════════════════════════
+   MAIN
+═══════════════════════════ */
+main {
+  width: 100%;
+  max-width: 480px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(env(safe-area-inset-bottom), 24px);
+}
+
+/* ═══════════════════════════
+   PRICE SECTION — left prices + right slider
+═══════════════════════════ */
+.price-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+
+
+/* Left column: stacked prices */
+.price-col {
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 28px 24px;
+  justify-content: flex-start;
+}
+
+
+/* International block */
+.intl-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-bottom: 20px;
+}
+
+
+/* Domestic block */
+.dom-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 16px;
+}
+
+.price-eyebrow { display: none; }
+
+.price-num-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.unit-label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  padding-bottom: 10px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.intl-block .unit-label {
+  color: var(--dn);
+  opacity: 0.75;
+}
+
+.dom-block .unit-label {
+  color: var(--up);
+  opacity: 0.75;
+}
+
+/* Currency symbol + number row */
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+}
+
+.currency-sym {
+  font-family: var(--serif);
+  font-style: normal;
+  font-weight: 300;
+  font-size: clamp(36px, 10vw, 48px);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  align-self: flex-end;
+  margin-bottom: 4px;
+}
+
+.intl-block .currency-sym { color: var(--intl-price); opacity: 0.7; }
+.dom-block  .currency-sym { color: var(--cn-price); opacity: 0.7; }
+
+/* Giant headline number */
+.price-headline {
+  font-family: var(--bebas);
+  font-size: clamp(68px, 20vw, 88px);
+  letter-spacing: 0.01em;
+  line-height: 0.9;
+  font-feature-settings: 'tnum';
+  display: block;
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+}
+
+.intl-block .price-headline { color: var(--intl-price); }
+.dom-block  .price-headline { color: var(--cn-price); }
+
+.price-unit-line {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 300;
+  color: var(--muted);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
+
+/* — Vertical slider (right column) — */
+.vslider-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 0;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  cursor: ns-resize;
+}
+
+
+
+.vtrack {
+  flex: 1;
+  width: 1px;
+  background: rgba(0,0,0,0.12);
+  position: relative;
+  overflow: visible;
+}
+
+.vtrack-fill {
+  position: absolute;
+  bottom: 0; left: -0.5px; right: -0.5px;
+  background: var(--ink);
+  height: 50%;
+  pointer-events: none;
+}
+
+.vthumb {
+  position: absolute;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 3px solid var(--paper);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  cursor: grab;
+  z-index: 2;
+  transition: width .15s, height .15s, box-shadow .12s;
+}
+
+.vthumb.active {
+  cursor: grabbing;
+  width: 44px; height: 44px;
+  box-shadow: 0 0 0 6px rgba(0,0,0,0.08), 0 2px 14px rgba(0,0,0,0.22);
+}
+
+
+
+.vslider-lbl {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.vslider-lbl.top { margin-bottom: 6px; }
+.vslider-lbl.bot { margin-top: 6px; }
+
+/* 微调轨道（绿色） */
+.vtrack-fine {
+  flex: 1;
+  width: 1px;
+  background: rgba(27,94,32,0.12);
+  position: relative;
+  overflow: visible;
+}
+
+.vtrack-fine-fill {
+  position: absolute;
+  bottom: 0; left: -0.5px; right: -0.5px;
+  background: var(--dn);
+  height: 50%;
+  pointer-events: none;
+}
+
+.vthumb-fine {
+  position: absolute;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--dn);
+  border: 3px solid var(--paper);
+  box-shadow: 0 2px 8px rgba(27,94,32,0.3);
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  cursor: grab;
+  z-index: 2;
+  transition: width .15s, height .15s, box-shadow .12s;
+}
+
+.vthumb-fine.active {
+  cursor: grabbing;
+  width: 44px; height: 44px;
+  box-shadow: 0 0 0 6px rgba(27,94,32,0.15), 0 2px 14px rgba(27,94,32,0.28);
+}
+
+.dual-slider {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 8px;
+}
+
+
+
+
+/* ═══════════════════════════
+   RULE DIVIDERS
+═══════════════════════════ */
+.section-rule {
+  width: calc(100% - 40px);
+  margin: 0 20px;
+  border: none;
+  border-top: 1px solid var(--rule);
+}
+
+.section-rule.thick {
+  border-top: 2px solid var(--ink2);
+}
+
+.section-head {
+  padding: 16px 24px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.section-head-title {
+  font-family: var(--bebas);
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--ink2);
+}
+
+.section-head-sub {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ═══════════════════════════
+   RATE ROW
+═══════════════════════════ */
+.rate-wrap {
+  padding: 20px 24px 20px;
+  border-bottom: 1px solid var(--rule2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rate-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rate-lbl {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink2);
+  flex: 1;
+}
+
+.rate-inp {
+  width: 88px;
+  background: none;
+  border: none;
+  border-bottom: 1.5px solid var(--rule);
+  padding: 2px 0;
+  font-family: var(--bebas);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  text-align: right;
+  outline: none;
+  -webkit-appearance: none;
+  min-height: 36px;
+  transition: border-color .15s;
+}
+.rate-inp:focus { border-color: var(--gold); }
+
+.rate-sfx {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.rate-status {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.formula {
+  font-family: var(--serif);
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.fhl  { color: var(--ink2); font-style: normal; }
+.fres { color: var(--gold); font-style: normal; font-weight: 600; }
+
+/* ═══════════════════════════
+   POSITION
+═══════════════════════════ */
+.pos-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--rule2);
+}
+
+.pos-lbl {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink2);
+  flex: 1;
+}
+
+.pos-inp {
+  width: 96px;
+  background: none;
+  border: none;
+  border-bottom: 1.5px solid var(--rule);
+  padding: 2px 0;
+  font-family: var(--bebas);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-align: right;
+  outline: none;
+  -webkit-appearance: none;
+  min-height: 36px;
+  transition: border-color .15s;
+}
+.pos-inp:focus { border-color: var(--ink); }
+
+.pos-sfx {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 付费引导弹窗 */
+.paywall {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 999;
+  align-items: flex-end;
+  justify-content: center;
+}
+.paywall.show { display: flex; }
+
+.paywall-card {
+  background: var(--paper);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px 20px 0 0;
+  padding: 32px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.paywall-title {
+  font-family: var(--bebas);
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.paywall-desc {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink2);
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+.paywall-price {
+  font-family: var(--bebas);
+  font-size: 42px;
+  color: var(--up);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.paywall-price span {
+  font-size: 16px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-weight: 300;
+  margin-left: 4px;
+}
+
+.paywall-btn {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
+  font-family: var(--bebas);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  width: 100%;
+  min-height: 52px;
+}
+
+.paywall-dismiss {
+  background: none;
+  border: none;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  width: 100%;
+}
+
+/* 持仓克数锁定样式 */
+.pos-inp.locked {
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.lock-icon {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+/* PWA 安装提示条 */
+.pwa-banner {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px 20px;
+  z-index: 998;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 480px;
+  margin: 0 auto;
+  border-radius: 16px 16px 0 0;
+}
+.pwa-banner.show { display: flex; }
+.pwa-banner-title {
+  font-family: var(--bebas);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+}
+.pwa-banner-desc {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+}
+.pwa-banner-btns {
+  display: flex;
+  gap: 10px;
+}
+.pwa-install-btn {
+  flex: 1;
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--bebas);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  min-height: 44px;
+}
+.pwa-dismiss-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-family: var(--sans);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 10px;
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+/* 激活码输入区 */
+.code-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.code-input {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 1.5px solid var(--rule);
+  padding: 6px 0;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.code-input:focus { border-color: var(--ink); }
+
+.code-btn {
+  background: none;
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.code-msg {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--dn);
+  min-height: 16px;
+}
+
+/* ── PNL Card ── */
+.pnl-card {
+  margin: 0 24px 28px;
+  border-top: 1px solid var(--rule2);
+  padding-top: 20px;
+  overflow: hidden;
+}
+
+/* Top row: big pct left, amount right */
+.pnl-top {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.pnl-pct {
+  font-family: var(--bebas);
+  font-size: clamp(52px, 15vw, 68px);
+  letter-spacing: 0.01em;
+  line-height: 0.9;
+  font-feature-settings: 'tnum';
+  text-align: right;
+  width: 100%;
+  display: block;
+}
+.pnl-pct.profit { color: var(--up); }
+.pnl-pct.loss   { color: var(--dn); }
+.pnl-pct.zero   { color: var(--muted); }
+
+.pnl-right {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.pnl-amount {
+  font-family: var(--bebas);
+  font-size: clamp(36px, 10vw, 52px);
+  letter-spacing: 0.01em;
+  line-height: 0.9;
+  font-feature-settings: 'tnum';
+  flex-shrink: 1;
+  min-width: 0;
+}
+.pnl-amount.profit { color: var(--up); }
+.pnl-amount.loss   { color: var(--dn); }
+.pnl-amount.zero   { color: var(--muted); }
+
+.pnl-amount-lbl {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--dn);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* Bottom row: progress bar + market value */
+.pnl-bar-wrap {
+  margin-bottom: 10px;
+}
+
+.pnl-bar-track {
+  width: 100%;
+  height: 2px;
+  background: var(--rule2);
+  border-radius: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pnl-bar-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: 1px;
+  width: 0%;
+  max-width: 100%;
+  transition: width .3s ease, background .3s;
+}
+
+.pnl-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 8px;
+}
+
+.pnl-mkt {
+  font-family: var(--serif);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pnl-mkt-val {
+  font-family: var(--bebas);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--ink2);
+}
+
+.pnl-eyebrow-lbl {
+  font-family: var(--serif);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* ═══════════════════════════
+   FOOTER
+═══════════════════════════ */
+footer {
+  width: 100%;
+  max-width: 480px;
+  border-top: 3px double var(--rule);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ft-l {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--muted);
+}
+.ft-r {
+  font-family: var(--bebas);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+/* flash */
+@keyframes nflash { 0%{opacity:1} 30%{opacity:.4} 100%{opacity:1} }
+.flash { animation: nflash .1s ease-out; }
+</style>
+</head>
+<body>
+
+<!-- Masthead -->
+<header class="masthead">
+  <div class="masthead-top">
+    <span class="masthead-title">黄金换算助手</span>
+    <div class="masthead-right">
+      <span class="masthead-date" id="today-date"></span>
+    </div>
+  </div>
+  <div class="masthead-meta">
+    <span class="masthead-sub">Gold Price Converter · Real-time Exchange</span>
+    <div class="live-pill">
+      <span class="live-dot" id="ldot"></span>
+      <span id="live-txt">CONNECTING</span>
+    </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Price section -->
+  <div class="price-section">
+
+    <!-- Left: stacked prices -->
+    <div class="price-col">
+
+      <!-- International -->
+      <div class="intl-block">
+        <div class="price-num-wrap">
+          <div class="price-row">
+            <span class="currency-sym">$</span>
+            <span class="price-headline" id="val-intl">—</span>
+          </div>
+          <span class="unit-label">美元/盎司</span>
+        </div>
+      </div>
+
+      <!-- Domestic -->
+      <div class="dom-block">
+        <div class="price-num-wrap">
+          <div class="price-row">
+            <span class="currency-sym">¥</span>
+            <span class="price-headline" id="val-cn">—</span>
+          </div>
+          <span class="unit-label">人民币/克</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: 双滑杆 — 左粗调，右微调（绿） -->
+    <div class="dual-slider" id="dual-slider">
+      <!-- 粗调轨道（黑） -->
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative;touch-action:none;user-select:none;padding:28px 0;">
+        <span class="vslider-lbl top" style="color:var(--muted);opacity:0.5;">+</span>
+        <div class="vtrack" id="vtrack">
+          <div class="vtrack-fill" id="vtrack-fill"></div>
+          <div class="vthumb" id="vthumb"></div>
+        </div>
+        <span class="vslider-lbl bot" style="color:var(--muted);opacity:0.5;">−</span>
+      </div>
+      <!-- 微调轨道（绿） -->
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;position:relative;touch-action:none;user-select:none;padding:28px 0;">
+        <span class="vslider-lbl top" style="color:var(--dn);opacity:0.5;">+</span>
+        <div class="vtrack-fine" id="vtrack-fine">
+          <div class="vtrack-fine-fill" id="vtrack-fine-fill"></div>
+          <div class="vthumb-fine" id="vthumb-fine"></div>
+        </div>
+        <span class="vslider-lbl bot" style="color:var(--dn);opacity:0.5;">−</span>
+      </div>
+    </div>
+
+  </div>
+
+
+
+  <!-- Rate -->
+  <div class="section-head">
+    <span class="section-head-title">汇率</span>
+    <span class="section-head-sub" id="rate-status">获取中…</span>
+  </div>
+
+  <div class="rate-wrap">
+    <div class="rate-row">
+      <span class="rate-lbl">美元兑人民币</span>
+      <input class="rate-inp" type="number" id="rate-input" value="7.25" step="0.001" min="6" max="9">
+      <span class="rate-sfx">CNY/USD</span>
+    </div>
+    <div class="formula" id="formula"></div>
+  </div>
+
+  <div class="section-head">
+    <span class="section-head-title">持仓预览</span>
+    <span class="section-head-sub" id="holding-sub">—</span>
+  </div>
+
+  <div class="pos-wrap">
+    <div class="pnl-card">
+      <div class="pnl-top">
+        <div class="pnl-right">
+          <div class="pnl-amount zero" id="pnl-amount">—</div>
+          <span class="pnl-amount-lbl">元</span>
+        </div>
+        <div class="pnl-pct zero" id="pnl-pct">—</div>
+      </div>
+      <div class="pnl-bar-wrap">
+        <div class="pnl-bar-track">
+          <div class="pnl-bar-fill" id="pnl-bar"></div>
+        </div>
+      </div>
+      <div class="pnl-bottom">
+        <span class="pnl-mkt">当前市值</span>
+        <span class="pnl-mkt-val" id="pnl-mkt">—</span>
+      </div>
+    </div>
+    <div class="pos-row">
+      <span class="pos-lbl">持仓量</span>
+      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="0.01" min="0" readonly onclick="showPaywall()" oninput="saveQty();updatePos()">
+      <span class="pos-sfx">克 <span class="lock-icon" id="lock-icon">🔒</span></span>
+    </div>
+    <div class="pos-row">
+      <span class="pos-lbl">持仓均价</span>
+      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="0" oninput="updatePos()">
+      <span class="pos-sfx">CNY/克</span>
+    </div>
+  </div>
+
+</main>
+
+<!-- 安装引导弹窗 -->
+<div class="paywall" id="install-guide" onclick="closeInstallGuide(event)">
+  <div class="paywall-card">
+    <div class="paywall-title">添加到手机桌面</div>
+
+    <!-- 微信内打开提示（优先显示） -->
+    <div id="wechat-tip" style="display:none;background:#FFFBE8;border-radius:10px;padding:14px 14px 10px;border-left:3px solid var(--gold);">
+      <div style="font-family:var(--sans);font-size:12px;color:var(--ink);font-weight:600;margin-bottom:8px;">📢 检测到您在微信中打开</div>
+      <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2;">
+        微信内无法直接保存到桌面<br>
+        请点击右上角 <strong style="font-size:15px;">···</strong> → 选择<strong>「在浏览器打开」</strong><br>
+        再点击右上角「桌面」按钮完成添加
+      </div>
+    </div>
+
+    <!-- iOS 引导 -->
+    <div id="ios-tip" style="display:none;">
+      <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2.2;">
+        <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">iPhone / iPad</div>
+        1. 点击底部中间的 <strong>分享</strong> 按钮 <span style="font-size:15px;border:1px solid #ccc;padding:1px 4px;border-radius:4px;">⎙</span><br>
+        2. 向下滑，找到 <strong>「添加到主屏幕」</strong><br>
+        3. 右上角点 <strong>「添加」</strong> 完成 ✓
+      </div>
+    </div>
+
+    <!-- Android 引导 -->
+    <div id="android-tip" style="display:none;">
+      <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2.2;">
+        <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">Android 手机</div>
+        1. 点击浏览器右上角 <strong>⋮</strong> 菜单<br>
+        2. 选择 <strong>「添加到主屏幕」</strong><br>
+           或 <strong>「安装应用」</strong><br>
+        3. 确认即可 ✓
+      </div>
+      <button id="android-install-btn" class="paywall-btn" style="margin-top:14px;display:none;" onclick="installPWA()">一键添加到桌面</button>
+    </div>
+
+    <button class="paywall-dismiss" onclick="closeInstallGuide()">关闭</button>
+  </div>
+</div>
+
+<!-- PWA 安装提示 -->
+<div class="pwa-banner" id="pwa-banner">
+  <div class="pwa-banner-title">添加到主屏幕</div>
+  <div class="pwa-banner-desc" id="pwa-desc">
+    像 App 一样使用黄金换算助手，随时快速查价。
+  </div>
+  <div class="pwa-banner-btns">
+    <button class="pwa-install-btn" id="pwa-install-btn" onclick="installPWA()">添加到桌面</button>
+    <button class="pwa-dismiss-btn" onclick="dismissPWA()">以后再说</button>
+  </div>
+</div>
+
+<!-- 付费引导弹窗 -->
+<div class="paywall" id="paywall" onclick="handlePaywallBg(event)">
+  <div class="paywall-card">
+    <div class="paywall-title">解锁持仓管理</div>
+    <div class="paywall-desc">自定义持仓克数，精确追踪你的黄金投资收益。</div>
+
+    <!-- 两档定价 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0;">
+
+      <!-- 月付 -->
+      <div style="border:1px solid var(--rule);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-family:var(--sans);font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">月付</div>
+        <div style="font-family:var(--bebas);font-size:32px;color:var(--ink);letter-spacing:0.02em;line-height:1;">¥5<span style="font-size:13px;font-family:var(--sans);font-weight:300;color:var(--muted);margin-left:2px;">/月</span></div>
+        <div style="font-family:var(--sans);font-size:10px;color:var(--muted);">随时可退</div>
+        <button class="code-btn" style="width:100%;margin-top:4px;min-height:36px;" onclick="handlePurchase('monthly')">选择</button>
+      </div>
+
+      <!-- 两年 -->
+      <div style="border:1.5px solid var(--ink);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;gap:6px;position:relative;">
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:9px;font-weight:600;padding:2px 10px;border-radius:9999px;white-space:nowrap;letter-spacing:0.06em;">最划算</div>
+        <div style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--cn-price);letter-spacing:0.06em;">两年有效</div>
+        <div style="font-family:var(--bebas);font-size:32px;color:var(--ink);letter-spacing:0.02em;line-height:1;">¥20<span style="font-size:15px;font-family:var(--sans);font-weight:600;color:var(--cn-price);margin-left:4px;">/2年</span></div>
+        <div style="font-family:var(--sans);font-size:10px;color:var(--cn-price);">相当于 ¥0.83/月</div>
+        <button class="paywall-btn" style="padding:8px;font-size:14px;border-radius:7px;min-height:36px;margin-top:4px;" onclick="handlePurchase('yearly')">选择</button>
+      </div>
+
+    </div>
+
+    <div class="code-row">
+      <input class="code-input" id="code-input" placeholder="已有激活码？输入此处" maxlength="20">
+      <button class="code-btn" onclick="redeemCode()">激活</button>
+    </div>
+    <div class="code-msg" id="code-msg"></div>
+    <button class="paywall-dismiss" onclick="hidePaywall()">暂不升级，继续使用默认100克</button>
+  </div>
+</div>
+
+<footer>
+  <span class="ft-l">金价换算 · made with claude</span>
+  <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
+  <span class="ft-r">V 1.3.4 · 20260526</span>
+</footer>
+
+<script>
+const TROY = 31.1035;
+
+let lastIdx = -1;
+let MIN = 2145, MAX = 6864;  // 对应人民币 500~1600 CNY/g
+let currentVal = 4501;
+
+// Today's date
+const now = new Date();
+document.getElementById('today-date').textContent =
+  now.toLocaleDateString('zh-CN', {year:'numeric', month:'long', day:'numeric'});
+
+// ── Vertical slider ──
+// 拖动 thumb = 精调 ±1 USD（相对位移，每2px=1USD）
+// ▲▼ 按钮   = 粗调 ±50 USD，长按连续
+const vtrackEl   = document.getElementById('vtrack');
+const vthumbEl   = document.getElementById('vthumb');
+const vfillEl    = document.getElementById('vtrack-fill');
+let dragging = false;
+
+function valToPct(val) {
+  return (val - MIN) / (MAX - MIN);
+}
+
+function updateThumb(val) {
+  const pct    = valToPct(val);
+  const trackH = vtrackEl.getBoundingClientRect().height;
+  vthumbEl.style.bottom = (pct * trackH) + 'px';
+  vthumbEl.style.top    = 'auto';
+  vfillEl.style.height  = (pct * 100) + '%';
+}
+
+function clampVal(v) {
+  return Math.max(MIN, Math.min(MAX, Math.round(v)));
+}
+
+function moveTicks(val) {
+  updateThumb(val);
+  return Math.round(valToPct(val) * 60);
+}
+
+// ── 拖动 thumb ──
+// 正常按住拖动 → 粗调，绝对跟手
+// 长按 0.5s 不动 → 进入微调，thumb 变大变金色，相对位移 3px=1USD
+vthumbEl.style.pointerEvents = 'auto';
+
+let fineMode     = false;
+let longPressTimer = null;
+
+function yToVal(clientY) {
+  const r = vtrackEl.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
+  const raw = MIN + pct * (MAX - MIN);
+  return clampVal(Math.round(raw / 5) * 5);  // 粗调步长 5 USD
+}
+
+const FINE_RANGE = 150;  // 微调时显示范围 ±150 USD
+let fineMin = MIN, fineMax = MAX;  // 微调临时范围
+
+function enterFineMode(clientY) {
+  fineMode = true;
+  // 临时范围：当前值 ±150 USD，不超出全局范围
+  fineMin = Math.max(MIN, currentVal - FINE_RANGE);
+  fineMax = Math.min(MAX, currentVal + FINE_RANGE);
+  vthumbEl.classList.add('fine-mode');
+  if (navigator.vibrate) navigator.vibrate([15, 10, 15]);
+}
+
+function exitFineMode() {
+  fineMode = false;
+  fineMin = MIN; fineMax = MAX;
+  vthumbEl.classList.remove('fine-mode');
+  clearTimeout(longPressTimer);
+  longPressTimer = null;
+}
+
+function yToValFineFast(clientY) {
+  const r = vtrackEl.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
+  return Math.max(fineMin, Math.min(fineMax, Math.round(fineMin + pct * (fineMax - fineMin))));
+}
+
+// Mouse
+vthumbEl.addEventListener('mousedown', e => {
+  e.preventDefault();
+  dragging = true;
+  fineMode = false;
+  vthumbEl.classList.add('active');
+  longPressTimer = setTimeout(() => enterFineMode(e.clientY), 500);
+});
+
+// Touch
+vthumbEl.addEventListener('touchstart', e => {
+  e.preventDefault();
+  dragging = true;
+  fineMode = false;
+  const cy = e.touches[0].clientY;
+  vthumbEl.classList.add('active');
+  longPressTimer = setTimeout(() => enterFineMode(cy), 500);
+}, { passive: false });
+
+// ── 统一 window 事件（避免重复注册冲突）──
+window.addEventListener('touchmove', e => {
+  if (!dragging && !fineDragging) return;
+  e.preventDefault();
+  const cy = e.touches[0].clientY;
+  if (fineDragging) {
+    const v = yToValFine(cy);
+    updateThumbFineByVal(v);
+    if (v !== currentVal) { click(); if (navigator.vibrate) navigator.vibrate(4); }
+    currentVal = v;
+    const rate = parseFloat(document.getElementById('rate-input').value) || 7.25;
+    const cn   = v / TROY * rate;
+    document.getElementById('val-intl').textContent = Math.round(v);
+    document.getElementById('val-cn').textContent   = Math.round(cn);
+    document.getElementById('formula').innerHTML =
+      `<span class="fhl">${Math.round(v)}</span> ÷ 31.1035 × <span class="fhl">${rate.toFixed(4)}</span> = <span class="fres">${Math.round(cn)}</span> CNY/g`;
+    updatePos();
+  } else if (dragging) {
+    if (fineMode) {
+      const v = yToValFineFast(cy);
+      currentVal = v; update(v);
+    } else {
+      clearTimeout(longPressTimer);
+      const v = yToVal(cy);
+      currentVal = v; update(v);
+    }
+  }
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
+  if (fineDragging) { fineDragging = false; vthumbFine.classList.remove('active'); }
+  if (dragging) { dragging = false; exitFineMode(); vthumbEl.classList.remove('active'); }
+});
+
+window.addEventListener('mousemove', e => {
+  const cy = e.clientY;
+  if (fineDragging) {
+    const v = yToValFine(cy);
+    updateThumbFineByVal(v);
+    if (v !== currentVal) click();
+    currentVal = v;
+    const rate = parseFloat(document.getElementById('rate-input').value) || 7.25;
+    const cn   = v / TROY * rate;
+    document.getElementById('val-intl').textContent = Math.round(v);
+    document.getElementById('val-cn').textContent   = Math.round(cn);
+    document.getElementById('formula').innerHTML =
+      `<span class="fhl">${Math.round(v)}</span> ÷ 31.1035 × <span class="fhl">${rate.toFixed(4)}</span> = <span class="fres">${Math.round(cn)}</span> CNY/g`;
+    updatePos();
+  } else if (dragging) {
+    if (fineMode) {
+      const v = yToValFineFast(cy);
+      currentVal = v; update(v);
+    } else {
+      clearTimeout(longPressTimer);
+      const v = yToVal(cy);
+      currentVal = v; update(v);
+    }
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  if (fineDragging) { fineDragging = false; vthumbFine.classList.remove('active'); }
+  if (dragging) { dragging = false; exitFineMode(); vthumbEl.classList.remove('active'); }
+});
+
+// 点击轨道跳转（粗定位，不触发微调）
+vtrackEl.addEventListener('touchstart', e => {
+  if (e.target === vthumbEl) return;
+  e.preventDefault();
+  const v = yToVal(e.touches[0].clientY);
+  currentVal = v; update(v);
+  dragging = true; vthumbEl.classList.add('active');
+}, { passive: false });
+
+vtrackEl.addEventListener('mousedown', e => {
+  if (e.target === vthumbEl) return;
+  const v = yToVal(e.clientY);
+  currentVal = v; update(v);
+  dragging = true; vthumbEl.classList.add('active');
+});
+
+
+
+// ── 微调轨道（绿色，右侧）──
+// 每次拖动对应 ±50 USD 范围内的精确调节
+const vtrackFine   = document.getElementById('vtrack-fine');
+const vthumbFine   = document.getElementById('vthumb-fine');
+const vfillFine    = document.getElementById('vtrack-fine-fill');
+const FINE_WINDOW  = 50;  // 微调轨道对应 ±50 USD
+let fineDragging   = false;
+
+// 微调轨道：每次进入时记录中心值，绝对跟手，窗口 ±50 USD
+let fineCenter = 4720;  // 微调窗口中心值
+
+function resetFineThumb() {
+  // 把微调 thumb 重置到轨道中央
+  const h = vtrackFine.getBoundingClientRect().height;
+  vthumbFine.style.bottom = (h / 2) + 'px';
+  vthumbFine.style.top    = 'auto';
+  vfillFine.style.height  = '50%';
+}
+
+function yToValFine(clientY) {
+  const r    = vtrackFine.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
+  const fMin = Math.max(MIN, fineCenter - FINE_WINDOW);
+  const fMax = Math.min(MAX, fineCenter + FINE_WINDOW);
+  return Math.round(fMin + pct * (fMax - fMin));
+}
+
+function updateThumbFineByVal(val) {
+  const fMin = Math.max(MIN, fineCenter - FINE_WINDOW);
+  const fMax = Math.min(MAX, fineCenter + FINE_WINDOW);
+  const pct  = (val - fMin) / (fMax - fMin);
+  const h    = vtrackFine.getBoundingClientRect().height;
+  vthumbFine.style.bottom = (Math.max(0, Math.min(1, pct)) * h) + 'px';
+  vthumbFine.style.top    = 'auto';
+  vfillFine.style.height  = (Math.max(0, Math.min(1, pct)) * 100) + '%';
+}
+
+vthumbFine.style.pointerEvents = 'auto';
+
+// Touch
+vthumbFine.addEventListener('touchstart', e => {
+  fineDragging = true;
+  fineCenter = currentVal;  // 记录当前值为窗口中心
+  vthumbFine.classList.add('active');
+  e.preventDefault();
+}, { passive: false });
+
+vtrackFine.addEventListener('touchstart', e => {
+  if (e.target === vthumbFine) return;
+  fineDragging = true;
+  fineCenter = currentVal;
+  vthumbFine.classList.add('active');
+  e.preventDefault();
+}, { passive: false });
+
+
+
+// Mouse
+vthumbFine.addEventListener('mousedown', e => {
+  fineDragging = true;
+  fineCenter = currentVal;
+  vthumbFine.classList.add('active');
+  e.preventDefault();
+});
+
+vtrackFine.addEventListener('mousedown', e => {
+  if (e.target === vthumbFine) return;
+  fineDragging = true;
+  fineCenter = currentVal;
+  vthumbFine.classList.add('active');
+  e.preventDefault();
+});
+
+
+
+// Audio
+let ac = null;
+function click() {
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.frequency.value = 1600; o.type = 'triangle';
+    g.gain.setValueAtTime(0.05, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.022);
+    o.start(); o.stop(ac.currentTime + 0.022);
+  } catch(e) {}
+}
+
+
+function flash(el) {
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+
+function update(v) {
+  const rate = parseFloat(document.getElementById('rate-input').value) || 7.25;
+  const cn = v / TROY * rate;
+
+  const iEl = document.getElementById('val-intl');
+  const cEl = document.getElementById('val-cn');
+  iEl.textContent = Math.round(v);
+  cEl.textContent = Math.round(cn);
+
+  document.getElementById('formula').innerHTML =
+    `<span class="fhl">${Math.round(v)}</span> ÷ 31.1035 × <span class="fhl">${rate.toFixed(4)}</span> = <span class="fres">${Math.round(cn)}</span> CNY/g`;
+
+  const idx = moveTicks(v);
+  if (idx !== lastIdx) {
+    if (lastIdx !== -1) {
+      click();
+      if (navigator.vibrate) navigator.vibrate(3);
+      flash(iEl); flash(cEl);
+    }
+    lastIdx = idx;
+  }
+
+  updatePos();
+}
+
+function updatePos() {
+  const rate = parseFloat(document.getElementById('rate-input').value) || 7.25;
+  const v = currentVal || 4800;
+  const cnNow = v / TROY * rate;
+  const qty  = parseFloat(document.getElementById('pos-qty').value) || 0;
+  const cost = parseFloat(document.getElementById('pos-cost').value) || 0;
+
+  document.getElementById('holding-sub').textContent = qty > 0 ? `${qty} 克` : '—';
+
+  const pctEl    = document.getElementById('pnl-pct');
+  const amtEl    = document.getElementById('pnl-amount');
+  const barEl    = document.getElementById('pnl-bar');
+  const mktEl    = document.getElementById('pnl-mkt');
+
+  if (qty <= 0 || cost <= 0) {
+    pctEl.textContent = '—'; pctEl.className = 'pnl-pct zero';
+    amtEl.textContent = '—'; amtEl.className = 'pnl-amount zero';
+    barEl.style.width = '0%'; barEl.style.background = 'var(--muted)';
+    mktEl.textContent = '—';
+    return;
+  }
+
+  const pnl = (cnNow - cost) * qty;
+  const pct = (cnNow - cost) / cost * 100;
+  const mkt = cnNow * qty;
+  const s   = pnl >= 0 ? '+' : '';
+  const cls = pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'zero';
+  const col = pnl > 0 ? 'var(--up)' : pnl < 0 ? 'var(--dn)' : 'var(--muted)';
+
+  // Progress bar: cap at ±20%, show from left(loss) or right(gain) from center
+  const RANGE = 20;
+  const barPct = Math.min(Math.abs(pct), RANGE) / RANGE * 50; // 0–50% of half
+  if (pnl >= 0) {
+    barEl.style.left  = '50%';
+    barEl.style.right = 'auto';
+    barEl.style.width = barPct + '%';
+  } else {
+    barEl.style.right = '50%';
+    barEl.style.left  = 'auto';
+    barEl.style.width = barPct + '%';
+  }
+  barEl.style.background = col;
+
+  pctEl.textContent = `${s}${pct.toFixed(2)}%`;
+  pctEl.className   = `pnl-pct ${cls}`;
+  amtEl.textContent = `${s}${pnl.toFixed(2)}`;
+  amtEl.className   = `pnl-amount ${cls}`;
+  mktEl.textContent = `¥ ${(mkt / 10000).toFixed(2)} 万`;
+}
+
+document.getElementById('rate-input').addEventListener('input', () => update(currentVal));
+
+
+
+// 实时金价 via Cloudflare Worker + GoldAPI.io（缓存1分钟）
+async function fetchGoldPrice() {
+  try {
+    const res  = await fetch('/api/gold');
+    const data = await res.json();
+    const price = data.price;
+    if (price && price > 500 && price < 20000) {
+      const v = Math.max(MIN, Math.min(MAX, Math.round(price / 5) * 5));
+      currentVal = v;
+      update(v);
+      // 状态栏显示金价 + 涨跌幅
+      const s = document.getElementById('rate-status');
+      if (s) {
+        const cached = data.from_cache ? '' : ' · 实时';
+        const chp = data.change_pct;
+        const chpStr = chp ? (chp > 0 ? ' ▲' + chp.toFixed(2) + '%' : ' ▼' + Math.abs(chp).toFixed(2) + '%') : '';
+        s.textContent = s.textContent.replace(/ · 金价.*/,'')
+          + ' · 金价 $' + price + chpStr + cached;
+      }
+    }
+  } catch(e) {
+    // 静默失败，使用默认值更新界面
+    update(currentVal);
+  }
+}
+
+// Live exchange rate
+async function fetchRate() {
+  const statusEl = document.getElementById('rate-status');
+  const ldot = document.getElementById('ldot');
+  const ltxt = document.getElementById('live-txt');
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if (data?.rates?.CNY) {
+      document.getElementById('rate-input').value = data.rates.CNY.toFixed(4);
+      const d = new Date(data.time_last_update_utc);
+      statusEl.textContent = d.toLocaleDateString('zh-CN') + ' 更新';
+      ldot.classList.add('on');
+      ltxt.textContent = 'LIVE';
+      update(currentVal);
+    } else {
+      statusEl.textContent = '获取失败，默认 7.25';
+      ltxt.textContent = 'OFFLINE';
+    }
+  } catch(e) {
+    statusEl.textContent = '离线，默认 7.25';
+    ltxt.textContent = 'OFFLINE';
+  }
+}
+
+// SW 仅在部署环境启用
+// ── 反馈 ──
+function copyFeedback() {
+  const wechat = '9342306';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(wechat).then(() => {
+      alert('微信号 ' + wechat + ' 已复制\n添加微信反馈问题，我们会尽快处理');
+    }).catch(() => {
+      alert('微信号：' + wechat + '\n请手动复制后添加微信反馈');
+    });
+  } else {
+    alert('微信号：' + wechat + '\n请手动复制后添加微信反馈');
+  }
+}
+
+// ── 安装引导 ──
+function isWechat() {
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+function showInstallGuide() {
+  const guide = document.getElementById('install-guide');
+  // 重置所有提示
+  document.getElementById('wechat-tip').style.display   = 'none';
+  document.getElementById('ios-tip').style.display      = 'none';
+  document.getElementById('android-tip').style.display  = 'none';
+  document.getElementById('android-install-btn').style.display = 'none';
+
+  const inWechat = isWechat();
+
+  // 微信内始终显示提示
+  if (inWechat) {
+    document.getElementById('wechat-tip').style.display = 'block';
+  }
+
+  // 再叠加系统引导
+  if (isIOS) {
+    document.getElementById('ios-tip').style.display = 'block';
+  } else {
+    document.getElementById('android-tip').style.display = 'block';
+    // 非微信 + 有 deferredPrompt 才显示一键安装
+    if (!inWechat && deferredPrompt) {
+      document.getElementById('android-install-btn').style.display = 'block';
+    }
+  }
+
+  guide.classList.add('show');
+}
+
+function closeInstallGuide(e) {
+  if (!e || e.target === document.getElementById('install-guide')) {
+    document.getElementById('install-guide').classList.remove('show');
+  }
+}
+
+// ── PWA 安装逻辑 ──
+let deferredPrompt = null;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Android：显示安装横幅
+  if (!isStandalone && !sessionStorage.getItem('pwa_dismissed')) {
+    document.getElementById('pwa-banner').classList.add('show');
+  }
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('pwa-banner').classList.remove('show');
+    });
+  }
+}
+
+function dismissPWA() {
+  sessionStorage.setItem('pwa_dismissed', '1');
+  document.getElementById('pwa-banner').classList.remove('show');
+}
+
+// iOS：显示手动添加引导
+if (isIOS && !isStandalone && !sessionStorage.getItem('pwa_dismissed')) {
+  const banner = document.getElementById('pwa-banner');
+  document.getElementById('pwa-desc').textContent =
+    '点击底部分享按钮 → 选择「添加到主屏幕」，像 App 一样使用黄金换算助手。';
+  document.getElementById('pwa-install-btn').textContent = '知道了';
+  document.getElementById('pwa-install-btn').onclick = dismissPWA;
+  setTimeout(() => banner.classList.add('show'), 1500);
+}
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+// ── 付费 / 激活码逻辑（支持到期）──
+const CODES = {
+  // 月付 30天
+  'TEST1DAY': 1,   // 测试用，1天（8位）
+  'TEST': 1,         // 超简测试码
+  'M-2026-K7X9Q': 30,
+  'M-2026-P3NWB': 30,
+  'M-2026-H8ZFT': 30,
+  'M-2026-R5YCJ': 30,
+  'M-2026-V2LMD': 30,
+  'M-2026-G6ATU': 30,
+  'M-2026-W4ESN': 30,
+  'M-2026-D9QPK': 30,
+  'M-2026-F1BXR': 30,
+  'M-2026-J7HVC': 30,
+  // 两年 730天
+  'Y-2026-A4KMP': 730,
+  'Y-2026-B8NQX': 730,
+  'Y-2026-C2RZT': 730,
+  'Y-2026-E6WSJ': 730,
+  'Y-2026-I3FYU': 730,
+  'Y-2026-L9GVD': 730,
+  'Y-2026-N5HBK': 730,
+  'Y-2026-Q7XCF': 730,
+  'Y-2026-S1PTW': 730,
+  'Y-2026-U4ZDR': 730,
+};
+
+function isPaid() {
+  const expiry = localStorage.getItem('gold_expiry');
+  if (!expiry) return false;
+  const now = Date.now();
+  if (now > parseInt(expiry)) {
+    // 已到期，清除状态
+    localStorage.removeItem('gold_unlocked');
+    localStorage.removeItem('gold_expiry');
+    return false;
+  }
+  return true;
+}
+
+function unlock(days) {
+  const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+  localStorage.setItem('gold_unlocked', '1');
+  localStorage.setItem('gold_expiry', expiry.toString());
+  const inp = document.getElementById('pos-qty');
+  inp.removeAttribute('readonly');
+  inp.classList.remove('locked');
+  inp.onclick = null;
+  document.getElementById('lock-icon').style.display = 'none';
+  hidePaywall();
+}
+
+function showPaywall() {
+  if (isPaid()) return;
+  document.getElementById('paywall').classList.add('show');
+}
+
+function hidePaywall() {
+  document.getElementById('paywall').classList.remove('show');
+}
+
+function handlePaywallBg(e) {
+  if (e.target === document.getElementById('paywall')) hidePaywall();
+}
+
+function handlePurchase(plan) {
+  const wechat = '9342306';
+  const msg = plan === 'monthly'
+    ? '添加微信付款 ¥5/月，获取激活码'
+    : '添加微信付款 ¥20，获取激活码，使用2年';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(wechat).then(() => {
+      alert('微信号 ' + wechat + ' 已复制\n' + msg);
+    }).catch(() => {
+      alert('微信号：' + wechat + '\n请手动复制\n' + msg);
+    });
+  } else {
+    alert('微信号：' + wechat + '\n请手动复制\n' + msg);
+  }
+}
+
+function redeemCode() {
+  const code  = document.getElementById('code-input').value.trim().toUpperCase();
+  const msg   = document.getElementById('code-msg');
+  const entry = CODES[code];
+
+  // 1. 激活码是否存在
+  if (!entry) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '激活码无效，请检查后重试';
+    return;
+  }
+
+  // 2. 激活码自身是否已过截止日期（防止旧码重新使用）
+  if (Date.now() > entry.until) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '该激活码已过期，请购买新激活码';
+    return;
+  }
+
+  // 3. 检查是否已被使用过（同设备防重复）
+  const usedCodes = JSON.parse(localStorage.getItem('gold_used_codes') || '[]');
+  if (usedCodes.includes(code)) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '该激活码已使用过，请联系客服';
+    return;
+  }
+
+  // 4. 标记为已使用并激活
+  usedCodes.push(code);
+  localStorage.setItem('gold_used_codes', JSON.stringify(usedCodes));
+
+  const days  = entry.days;
+  const label = days === 1 ? '1天' : days === 30 ? '30天' : '2年';
+  msg.style.color = 'var(--dn)';
+  msg.textContent = '✓ 激活成功！有效期' + label;
+  setTimeout(() => unlock(days), 800);
+}
+
+// 持仓克数保存/读取
+function saveQty() {
+  if (isPaid()) {
+    const qty = document.getElementById('pos-qty').value;
+    localStorage.setItem('gold_qty', qty);
+  }
+}
+
+// 初始化付费状态
+(function initPaid() {
+  if (isPaid()) {
+    const inp = document.getElementById('pos-qty');
+    inp.removeAttribute('readonly');
+    inp.classList.remove('locked');
+    inp.onclick = null;
+    inp.oninput = function() { saveQty(); updatePos(); };
+    document.getElementById('lock-icon').style.display = 'none';
+
+    // 恢复已保存的克数，并触发重新计算
+    const savedQty = localStorage.getItem('gold_qty');
+    if (savedQty && parseFloat(savedQty) > 0) {
+      inp.value = savedQty;
+      // 延迟执行确保 update() 已初始化完毕
+      setTimeout(() => updatePos(), 200);
+    }
+
+    // 显示到期时间
+    const expiry = new Date(parseInt(localStorage.getItem('gold_expiry')));
+    const lockIcon = document.getElementById('lock-icon');
+    if (lockIcon && lockIcon.parentElement) {
+      lockIcon.parentElement.title = '有效期至 ' + expiry.toLocaleDateString('zh-CN');
+    }
+  }
+})();
+
+requestAnimationFrame(() => {
+  // 立即显示默认值，异步更新
+  update(currentVal);
+  setTimeout(resetFineThumb, 100);
+  // 并行拉取，互不阻塞
+  fetchGoldPrice();
+  fetchRate();
+});
+</script>
+</body>
+</html>
