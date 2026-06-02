@@ -1061,14 +1061,14 @@ footer {
 <footer>
   <span class="ft-l">金价换算 · made with claude</span>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
-  <span class="ft-r">V 1.4.1 · 20260601</span>
+  <span class="ft-r">V 1.4.5 · 20260601</span>
 </footer>
 
 <script>
 const TROY = 31.1035;
 
 let lastIdx = -1;
-let MIN = 858, MAX = 8583;   // 对应人民币 200~2000 CNY/g
+let MIN = 500, MAX = 11000;  // 粗调全范围
 let currentVal = 4501;
 
 // Today's date
@@ -1190,6 +1190,9 @@ window.addEventListener('touchmove', e => {
       clearTimeout(longPressTimer);
       const v = yToVal(cy);
       currentVal = v; update(v);
+      // 粗调移动时微调 thumb 归位中间
+      resetFineThumb();
+      fineTouchStartVal = v;
     }
   }
 }, { passive: false });
@@ -1221,6 +1224,9 @@ window.addEventListener('mousemove', e => {
       clearTimeout(longPressTimer);
       const v = yToVal(cy);
       currentVal = v; update(v);
+      // 粗调移动时微调 thumb 归位中间
+      resetFineThumb();
+      fineTouchStartVal = v;
     }
   }
 });
@@ -1265,6 +1271,14 @@ function resetFineThumb() {
   vthumbFine.style.bottom = (h / 2) + 'px';
   vthumbFine.style.top    = 'auto';
   vfillFine.style.height  = '50%';
+  fineTouchStartBottom = h / 2;
+}
+
+function getCurrentFineBottom() {
+  // 读取当前 thumb 的 bottom 值
+  const h = vtrackFine.getBoundingClientRect().height;
+  const cur = vthumbFine.style.bottom !== '' ? parseFloat(vthumbFine.style.bottom) : h / 2;
+  return cur;
 }
 
 // 微调：完全基于手指位置的绝对跟手
@@ -1272,7 +1286,8 @@ function resetFineThumb() {
 // 按下时记录起始Y和起始值，拖动时用相对位移精确换算
 let fineTouchStartY = 0;
 let fineTouchStartVal = 0;
-const FINE_PX_PER_USD = 4; // 每4px = 1 USD，精确且跟手
+let fineTouchStartBottom = 0; // 按下时 thumb 的 bottom 位置
+const FINE_PX_PER_USD = 2.4; // 每2.4px = 1 USD，中点到边缘约50 USD
 
 function yToValFine(clientY) {
   // 相对位移方案：手指移动距离 / 4 = USD变化量
@@ -1282,12 +1297,10 @@ function yToValFine(clientY) {
 }
 
 function updateThumbFineByVal(val) {
-  // thumb位置：基于起始位置加上偏移，不跳动
-  const dy = (fineTouchStartVal - val) * FINE_PX_PER_USD;
   const r = vtrackFine.getBoundingClientRect();
-  const startPct = 0.5; // 每次按下时thumb在中间
-  const startBottom = startPct * r.height;
-  const newBottom = Math.max(0, Math.min(r.height, startBottom - (fineTouchStartVal - val) * FINE_PX_PER_USD));
+  // 从按下时的 thumb 位置开始移动，不强制归中
+  const newBottom = Math.max(0, Math.min(r.height,
+    fineTouchStartBottom - (fineTouchStartVal - val) * FINE_PX_PER_USD));
   vthumbFine.style.bottom = newBottom + 'px';
   vthumbFine.style.top    = 'auto';
   vfillFine.style.height  = (newBottom / r.height * 100) + '%';
@@ -1300,7 +1313,7 @@ vthumbFine.addEventListener('touchstart', e => {
   fineDragging = true;
   fineTouchStartY = e.touches[0].clientY;
   fineTouchStartVal = currentVal;
-  resetFineThumb();
+  fineTouchStartBottom = getCurrentFineBottom(); // 从当前位置继续
   vthumbFine.classList.add('active');
   e.preventDefault();
 }, { passive: false });
@@ -1310,7 +1323,7 @@ vtrackFine.addEventListener('touchstart', e => {
   fineDragging = true;
   fineTouchStartY = e.touches[0].clientY;
   fineTouchStartVal = currentVal;
-  resetFineThumb();
+  fineTouchStartBottom = getCurrentFineBottom();
   vthumbFine.classList.add('active');
   e.preventDefault();
 }, { passive: false });
@@ -1322,7 +1335,7 @@ vthumbFine.addEventListener('mousedown', e => {
   fineDragging = true;
   fineTouchStartY = e.clientY;
   fineTouchStartVal = currentVal;
-  resetFineThumb();
+  fineTouchStartBottom = getCurrentFineBottom();
   vthumbFine.classList.add('active');
   e.preventDefault();
 });
@@ -1332,7 +1345,7 @@ vtrackFine.addEventListener('mousedown', e => {
   fineDragging = true;
   fineTouchStartY = e.clientY;
   fineTouchStartVal = currentVal;
-  resetFineThumb();
+  fineTouchStartBottom = getCurrentFineBottom();
   vthumbFine.classList.add('active');
   e.preventDefault();
 });
