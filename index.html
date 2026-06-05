@@ -956,12 +956,12 @@ footer {
     </div>
     <div class="pos-row">
       <span class="pos-lbl">持仓量</span>
-      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="1" min="0" readonly onclick="showPaywall()" oninput="saveQty();updatePos()">
+      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="1" min="1" max="1000000" readonly onclick="showPaywall()" oninput="saveQty();updatePos()">
       <span class="pos-sfx">克 <span class="lock-icon" id="lock-icon">🔒</span></span>
     </div>
     <div class="pos-row">
       <span class="pos-lbl">持仓均价</span>
-      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="0" oninput="saveCost();updatePos()" onchange="saveCost();updatePos()">
+      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="10" max="2000" oninput="saveCost();updatePos()" onchange="saveCost();updatePos()">
       <span class="pos-sfx">CNY/克</span>
     </div>
   </div>
@@ -1061,7 +1061,7 @@ footer {
 <footer>
   <span class="ft-l">金价换算 · made with claude</span>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
-  <span class="ft-r">V 1.5.1 · 20260605</span>
+  <span class="ft-r">V 1.5.5 · 20260605</span>
 </footer>
 
 <script>
@@ -1759,15 +1759,25 @@ function redeemCode() {
 
 // 持仓克数保存/读取
 function saveQty() {
-  if (isPaid()) {
-    const qty = document.getElementById('pos-qty').value;
-    localStorage.setItem('gold_qty', qty);
+  const inp = document.getElementById('pos-qty');
+  let qty = parseFloat(inp.value);
+  // 边界校验（无论付费还是试用期都执行）
+  if (isNaN(qty) || qty < 1) qty = 1;
+  if (qty > 1000000) qty = 1000000;
+  inp.value = Math.round(qty);
+  // 只有付费或试用期才保存
+  if (isPaid() || isInTrial()) {
+    localStorage.setItem('gold_qty', inp.value);
   }
 }
 
 function saveCost() {
-  const cost = document.getElementById('pos-cost').value;
-  if (cost !== '') localStorage.setItem('gold_cost', cost);
+  const inp = document.getElementById('pos-cost');
+  let cost = parseFloat(inp.value);
+  if (isNaN(cost) || cost < 10) cost = 10;
+  if (cost > 2000) cost = 2000;
+  inp.value = Math.round(cost); // 强制整数
+  if (inp.value !== '') localStorage.setItem('gold_cost', inp.value);
 }
 
 // 初始化付费/试用状态
