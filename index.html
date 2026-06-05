@@ -956,12 +956,12 @@ footer {
     </div>
     <div class="pos-row">
       <span class="pos-lbl">持仓量</span>
-      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="0.01" min="0" readonly onclick="showPaywall()" oninput="saveQty();updatePos()">
+      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="1" min="0" readonly onclick="showPaywall()" oninput="saveQty();updatePos()">
       <span class="pos-sfx">克 <span class="lock-icon" id="lock-icon">🔒</span></span>
     </div>
     <div class="pos-row">
       <span class="pos-lbl">持仓均价</span>
-      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="0" oninput="saveCost();updatePos()">
+      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="0" oninput="saveCost();updatePos()" onchange="saveCost();updatePos()">
       <span class="pos-sfx">CNY/克</span>
     </div>
   </div>
@@ -1061,7 +1061,7 @@ footer {
 <footer>
   <span class="ft-l">金价换算 · made with claude</span>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
-  <span class="ft-r">V 1.4.5 · 20260601</span>
+  <span class="ft-r">V 1.4.6 · 20260602</span>
 </footer>
 
 <script>
@@ -1648,6 +1648,36 @@ function isPaid() {
   return true;
 }
 
+// 试用期：14天，从第一次打开开始计时
+const TRIAL_DAYS = 14;
+
+function getTrialStart() {
+  let ts = localStorage.getItem('gold_trial_start');
+  if (!ts) {
+    ts = Date.now().toString();
+    localStorage.setItem('gold_trial_start', ts);
+  }
+  return parseInt(ts);
+}
+
+function isInTrial() {
+  if (isPaid()) return false;
+  const start = getTrialStart();
+  return Date.now() - start < TRIAL_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function isTrialExpired() {
+  if (isPaid()) return false;
+  const start = getTrialStart();
+  return Date.now() - start >= TRIAL_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function getTrialDaysLeft() {
+  const start = getTrialStart();
+  const left = Math.ceil((TRIAL_DAYS * 24 * 60 * 60 * 1000 - (Date.now() - start)) / (24 * 60 * 60 * 1000));
+  return Math.max(0, left);
+}
+
 function unlock(days) {
   const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
   localStorage.setItem('gold_unlocked', '1');
@@ -1737,39 +1767,70 @@ function saveQty() {
 
 function saveCost() {
   const cost = document.getElementById('pos-cost').value;
-  if (cost) localStorage.setItem('gold_cost', cost);
+  if (cost !== '') localStorage.setItem('gold_cost', cost);
 }
 
-// 初始化付费状态
+// 初始化付费/试用状态
 (function initPaid() {
-  if (isPaid()) {
-    const inp = document.getElementById('pos-qty');
+  const inp = document.getElementById('pos-qty');
+
+  if (isPaid() || isInTrial()) {
+    // 付费用户 或 试用期内：解锁所有功能
     inp.removeAttribute('readonly');
     inp.classList.remove('locked');
     inp.onclick = null;
     inp.oninput = function() { saveQty(); updatePos(); };
     document.getElementById('lock-icon').style.display = 'none';
 
-    // 恢复已保存的克数，并触发重新计算
+    // 恢复已保存的克数
     const savedQty = localStorage.getItem('gold_qty');
     if (savedQty && parseFloat(savedQty) > 0) {
       inp.value = savedQty;
       setTimeout(() => updatePos(), 200);
     }
 
-    // 显示到期时间
-    const expiry = new Date(parseInt(localStorage.getItem('gold_expiry')));
-    const lockIcon = document.getElementById('lock-icon');
-    if (lockIcon && lockIcon.parentElement) {
-      lockIcon.parentElement.title = '有效期至 ' + expiry.toLocaleDateString('zh-CN');
+    // 试用期内显示剩余天数
+    if (isInTrial()) {
+      const daysLeft = getTrialDaysLeft();
+      const lockIcon = document.getElementById('lock-icon');
+      if (lockIcon && lockIcon.parentElement) {
+        lockIcon.parentElement.title = '试用期剩余 ' + daysLeft + ' 天';
+      }
     }
+
+    if (isPaid()) {
+      const expiry = new Date(parseInt(localStorage.getItem('gold_expiry')));
+      const lockIcon = document.getElementById('lock-icon');
+      if (lockIcon && lockIcon.parentElement) {
+        lockIcon.parentElement.title = '有效期至 ' + expiry.toLocaleDateString('zh-CN');
+      }
+    }
+
+  } else if (isTrialExpired()) {
+    // 试用期到期：锁定持仓预览，重置数据
+    // 保存用户数据用于提示，但界面回到默认值
+    const savedQty  = localStorage.getItem('gold_qty')  || '100';
+    const savedCost = localStorage.getItem('gold_cost') || '1000';
+
+    inp.value = '100';
+    inp.setAttribute('readonly', true);
+    inp.classList.add('locked');
+    inp.onclick = function() { showTrialExpiredPaywall(savedQty, savedCost); };
+    document.getElementById('lock-icon').style.display = '';
+
+    // 均价也重置
+    document.getElementById('pos-cost').value = '1000';
+    document.getElementById('pos-cost').setAttribute('readonly', true);
+    document.getElementById('pos-cost').onclick = function() { showTrialExpiredPaywall(savedQty, savedCost); };
+
+    setTimeout(() => updatePos(), 200);
   }
 })();
 
 requestAnimationFrame(() => {
   // 恢复持仓均价
   const savedCost = localStorage.getItem('gold_cost');
-  if (savedCost && parseFloat(savedCost) > 0) {
+  if (savedCost !== null && savedCost !== '') {
     document.getElementById('pos-cost').value = savedCost;
   }
   update(currentVal);
