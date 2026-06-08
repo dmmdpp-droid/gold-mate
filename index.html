@@ -1061,7 +1061,7 @@ footer {
 <footer>
   <span class="ft-l">金价换算 · made with claude</span>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
-  <span class="ft-r">V 1.5.5 · 20260605</span>
+  <span class="ft-r">V 1.6.0 · 20260608</span>
 </footer>
 
 <script>
@@ -1719,42 +1719,55 @@ function handlePurchase(plan) {
   }
 }
 
-function redeemCode() {
-  const code  = document.getElementById('code-input').value.trim().toUpperCase();
-  const msg   = document.getElementById('code-msg');
-  const entry = CODES[code];
+async function redeemCode() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  const msg  = document.getElementById('code-msg');
+  const btn  = document.querySelector('#paywall button[onclick*="redeemCode"]');
 
-  // 1. 激活码是否存在
-  if (!entry) {
+  if (!code) {
     msg.style.color = 'var(--up)';
-    msg.textContent = '激活码无效，请检查后重试';
+    msg.textContent = '请输入激活码';
     return;
   }
 
-  // 2. 激活码自身是否已过截止日期（防止旧码重新使用）
-  if (Date.now() > entry.until) {
+  // 防重复点击
+  if (btn) btn.disabled = true;
+  msg.style.color = 'var(--tx2)';
+  msg.textContent = '验证中…';
+
+  try {
+    const res  = await fetch('/api/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      const days  = data.days;
+      const label = days >= 365 ? Math.round(days / 365) + '年'
+                  : days >= 30  ? Math.round(days / 30)  + '个月'
+                  : days + '天';
+      msg.style.color = 'var(--dn)';
+      msg.textContent = '✓ 激活成功！有效期' + label;
+      setTimeout(() => unlock(days), 800);
+    } else {
+      const REASON_MAP = {
+        not_found:    '激活码无效，请检查后重试',
+        expired:      '该激活码已过期，请购买新激活码',
+        already_used: '该激活码已被使用，请联系客服',
+        empty_code:   '请输入激活码',
+        data_error:   '服务异常，请稍后重试',
+      };
+      msg.style.color = 'var(--up)';
+      msg.textContent = REASON_MAP[data.reason] || '激活失败，请重试';
+    }
+  } catch (e) {
     msg.style.color = 'var(--up)';
-    msg.textContent = '该激活码已过期，请购买新激活码';
-    return;
+    msg.textContent = '网络错误，请稍后重试';
+  } finally {
+    if (btn) btn.disabled = false;
   }
-
-  // 3. 检查是否已被使用过（同设备防重复）
-  const usedCodes = JSON.parse(localStorage.getItem('gold_used_codes') || '[]');
-  if (usedCodes.includes(code)) {
-    msg.style.color = 'var(--up)';
-    msg.textContent = '该激活码已使用过，请联系客服';
-    return;
-  }
-
-  // 4. 标记为已使用并激活
-  usedCodes.push(code);
-  localStorage.setItem('gold_used_codes', JSON.stringify(usedCodes));
-
-  const days  = entry.days;
-  const label = days === 1 ? '1天' : days === 30 ? '30天' : '2年';
-  msg.style.color = 'var(--dn)';
-  msg.textContent = '✓ 激活成功！有效期' + label;
-  setTimeout(() => unlock(days), 800);
 }
 
 // 持仓克数保存/读取
