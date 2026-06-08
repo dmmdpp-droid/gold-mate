@@ -1059,10 +1059,14 @@ footer {
 </div>
 
 <footer>
-  <span class="ft-l">金价换算 · made with claude</span>
-  <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
-  <span id="member-status" style="font-size:11px;color:var(--muted);"></span>
-  <span class="ft-r">V 1.6.0 · 20260608</span>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;width:100%;">
+    <span class="ft-l">金价换算 · made with claude</span>
+    <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
+    <span class="ft-r">V 1.6.0 · 20260608</span>
+  </div>
+  <div style="text-align:center;margin-top:4px;">
+    <span id="member-status" style="font-size:11px;color:var(--muted);"></span>
+  </div>
 </footer>
 
 <script>
@@ -1830,33 +1834,42 @@ function saveCost() {
     if (isPaid()) {
       const expiryTs = parseInt(localStorage.getItem('gold_expiry'));
       const expiry = new Date(expiryTs);
-      const expiryStr = expiry.getFullYear() + '/' + (expiry.getMonth()+1) + '/' + expiry.getDate();
+      const validDate = expiryTs && !isNaN(expiry.getTime());
+      const expiryStr = validDate
+        ? expiry.getFullYear() + '/' + (expiry.getMonth()+1) + '/' + expiry.getDate()
+        : null;
       const lockIcon = document.getElementById('lock-icon');
-      if (lockIcon && lockIcon.parentElement) {
-        lockIcon.parentElement.title = '有效期至 ' + expiry.toLocaleDateString('zh-CN');
+      if (lockIcon && lockIcon.parentElement && expiryStr) {
+        lockIcon.parentElement.title = '有效期至 ' + expiryStr;
       }
       if (memberStatusEl) {
-        memberStatusEl.textContent = '会员 · 有效期至 ' + expiryStr;
+        memberStatusEl.textContent = expiryStr ? '会员 · 有效期至 ' + expiryStr : '会员';
         memberStatusEl.style.color = 'var(--dn)';
       }
     }
 
   } else if (isTrialExpired()) {
     // 试用期到期：锁定持仓预览，重置数据
-    // 保存用户数据用于提示，但界面回到默认值
     const savedQty  = localStorage.getItem('gold_qty')  || '100';
     const savedCost = localStorage.getItem('gold_cost') || '1000';
 
     inp.value = '100';
     inp.setAttribute('readonly', true);
     inp.classList.add('locked');
-    inp.onclick = function() { showTrialExpiredPaywall(savedQty, savedCost); };
+    inp.onclick = function() { showPaywall(); };
     document.getElementById('lock-icon').style.display = '';
 
     // 均价也重置
     document.getElementById('pos-cost').value = '1000';
     document.getElementById('pos-cost').setAttribute('readonly', true);
-    document.getElementById('pos-cost').onclick = function() { showTrialExpiredPaywall(savedQty, savedCost); };
+    document.getElementById('pos-cost').onclick = function() { showPaywall(); };
+
+    // footer 显示到期提示
+    const memberStatusEl = document.getElementById('member-status');
+    if (memberStatusEl) {
+      memberStatusEl.textContent = '试用已到期 · 点击持仓量升级';
+      memberStatusEl.style.color = 'var(--up)';
+    }
 
     setTimeout(() => updatePos(), 200);
   }
