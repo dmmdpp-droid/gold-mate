@@ -962,7 +962,7 @@ footer {
     <div class="pos-row">
       <span class="pos-lbl">持仓均价</span>
       <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="10" max="2000" oninput="saveCost();updatePos()" onchange="saveCost();updatePos()">
-      <span class="pos-sfx">CNY/克</span>
+      <span class="pos-sfx">CNY/克 <span class="lock-icon" id="cost-lock-icon" style="display:none;">🔒</span></span>
     </div>
   </div>
 
@@ -1065,7 +1065,7 @@ footer {
     <span class="ft-r">V 1.6.0 · 20260608</span>
   </div>
   <div style="text-align:center;margin-top:4px;">
-    <span id="member-status" style="font-size:11px;color:var(--muted);"></span>
+    <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);"></span>
   </div>
 </footer>
 
@@ -1859,10 +1859,16 @@ function saveCost() {
     inp.onclick = function() { showPaywall(); };
     document.getElementById('lock-icon').style.display = '';
 
-    // 均价也重置
-    document.getElementById('pos-cost').value = '1000';
-    document.getElementById('pos-cost').setAttribute('readonly', true);
-    document.getElementById('pos-cost').onclick = function() { showPaywall(); };
+    // 均价也重置并锁定
+    const costInp = document.getElementById('pos-cost');
+    costInp.value = '1000';
+    costInp.setAttribute('readonly', true);
+    costInp.classList.add('locked');
+    costInp.oninput = null;
+    costInp.onchange = null;
+    costInp.onclick = function() { showPaywall(); };
+    const costLock = document.getElementById('cost-lock-icon');
+    if (costLock) costLock.style.display = '';
 
     // footer 显示到期提示
     const memberStatusEl = document.getElementById('member-status');
@@ -1876,10 +1882,12 @@ function saveCost() {
 })();
 
 requestAnimationFrame(() => {
-  // 恢复持仓均价
-  const savedCost = localStorage.getItem('gold_cost');
-  if (savedCost !== null && savedCost !== '') {
-    document.getElementById('pos-cost').value = savedCost;
+  // 恢复持仓均价（到期状态不恢复，保持默认1000）
+  if (!isTrialExpired()) {
+    const savedCost = localStorage.getItem('gold_cost');
+    if (savedCost !== null && savedCost !== '') {
+      document.getElementById('pos-cost').value = savedCost;
+    }
   }
   update(currentVal);
   setTimeout(resetFineThumb, 100);
