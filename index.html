@@ -933,6 +933,7 @@ footer {
   <div class="section-head">
     <span class="section-head-title">持仓预览</span>
     <span class="section-head-sub" id="holding-sub">—</span>
+    <button id="upgrade-btn" onclick="showPaywall()" style="display:none;background:none;border:1px solid var(--muted);border-radius:4px;padding:2px 8px;font-family:var(--serif);font-size:10px;color:var(--muted);cursor:pointer;margin-left:8px;">升级</button>
   </div>
 
   <div class="pos-wrap">
@@ -1059,14 +1060,9 @@ footer {
 </div>
 
 <footer>
-  <div style="display:flex;justify-content:space-between;align-items:baseline;width:100%;">
-    <span class="ft-l">金价换算 · made with claude</span>
-    <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
-    <span class="ft-r">V 1.6.0 · 20260608</span>
-  </div>
-  <div style="text-align:center;margin-top:4px;">
-    <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);"></span>
-  </div>
+  <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
+  <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);cursor:default;"></span>
+  <span class="ft-r">V 1.6.0 · 0608</span>
 </footer>
 
 <script>
@@ -1516,15 +1512,15 @@ async function fetchRate() {
 // SW 仅在部署环境启用
 // ── 反馈 ──
 function copyFeedback() {
-  const wechat = '9342306';
+  const wechat = 'goldmate888';
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(wechat).then(() => {
-      alert('微信号 ' + wechat + ' 已复制\n添加微信反馈问题，我们会尽快处理');
+      alert('客服微信：' + wechat + ' 已复制\n添加客服微信反馈问题，我们会尽快处理');
     }).catch(() => {
-      alert('微信号：' + wechat + '\n请手动复制后添加微信反馈');
+      alert('客服微信：' + wechat + '\n请手动复制后添加客服微信反馈');
     });
   } else {
-    alert('微信号：' + wechat + '\n请手动复制后添加微信反馈');
+    alert('客服微信：' + wechat + '\n请手动复制后添加客服微信反馈');
   }
 }
 
@@ -1709,10 +1705,10 @@ function handlePaywallBg(e) {
 }
 
 function handlePurchase(plan) {
-  const wechat = '9342306';
+  const wechat = 'goldmate888';
   const msg = plan === 'monthly'
-    ? '添加微信付款 ¥5/月，获取激活码'
-    : '添加微信付款 ¥20，获取激活码，使用2年';
+    ? '添加客服微信：goldmate888 付款 ¥5/月，获取激活码'
+    : '添加客服微信：goldmate888 付款 ¥20，获取激活码，使用2年';
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(wechat).then(() => {
       alert('微信号 ' + wechat + ' 已复制\n' + msg);
@@ -1826,9 +1822,15 @@ function saveCost() {
         lockIcon.parentElement.title = '试用期剩余 ' + daysLeft + ' 天';
       }
       if (memberStatusEl) {
-        memberStatusEl.textContent = '试用用户 · 还有 ' + daysLeft + ' 天到期';
+        memberStatusEl.textContent = '试用中 · 剩 ' + daysLeft + ' 天 · 点击升级';
         memberStatusEl.style.color = 'var(--muted)';
+        memberStatusEl.style.cursor = 'pointer';
+        memberStatusEl.style.textDecoration = 'underline';
+        memberStatusEl.style.textUnderlineOffset = '3px';
+        memberStatusEl.onclick = function() { showPaywall(); };
       }
+      const upgradeBtn = document.getElementById('upgrade-btn');
+      if (upgradeBtn) upgradeBtn.style.display = '';
     }
 
     if (isPaid()) {
@@ -1843,7 +1845,7 @@ function saveCost() {
         lockIcon.parentElement.title = '有效期至 ' + expiryStr;
       }
       if (memberStatusEl) {
-        memberStatusEl.textContent = expiryStr ? '会员 · 有效期至 ' + expiryStr : '会员';
+        memberStatusEl.textContent = expiryStr ? '会员至 ' + expiryStr : '会员';
         memberStatusEl.style.color = 'var(--dn)';
       }
     }
@@ -1873,8 +1875,14 @@ function saveCost() {
     // footer 显示到期提示
     const memberStatusEl = document.getElementById('member-status');
     if (memberStatusEl) {
-      memberStatusEl.textContent = '试用已到期 · 点击持仓量升级';
+      memberStatusEl.textContent = '试用已到期 · 点击升级';
       memberStatusEl.style.color = 'var(--up)';
+      memberStatusEl.style.cursor = 'pointer';
+      memberStatusEl.style.textDecoration = 'underline';
+      memberStatusEl.style.textUnderlineOffset = '3px';
+      memberStatusEl.onclick = function() { showPaywall(); };
+    const upgradeBtnExp = document.getElementById('upgrade-btn');
+    if (upgradeBtnExp) upgradeBtnExp.style.display = '';
     }
 
     setTimeout(() => updatePos(), 200);
