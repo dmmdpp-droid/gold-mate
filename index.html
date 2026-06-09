@@ -1025,22 +1025,22 @@ footer {
 <!-- 付费引导弹窗 -->
 <div class="paywall" id="paywall" onclick="handlePaywallBg(event)">
   <div class="paywall-card">
-    <div class="paywall-title">解锁持仓管理</div>
+    <div class="paywall-title"><span style="color:var(--dn);">升级 Pro</span> · 解锁持仓管理</div>
     <div class="paywall-desc">自定义持仓克数，精确追踪你的黄金投资收益。</div>
 
     <!-- 两档定价 -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0;">
 
       <!-- 月付 -->
-      <div style="border:1px solid var(--rule);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;gap:6px;">
+      <div id="plan-monthly" onclick="selectPlan('monthly')" style="border:1px solid var(--rule);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border 0.15s;">
         <div style="font-family:var(--sans);font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">月付</div>
         <div style="font-family:var(--bebas);font-size:32px;color:var(--ink);letter-spacing:0.02em;line-height:1;">¥5<span style="font-size:13px;font-family:var(--sans);font-weight:300;color:var(--muted);margin-left:2px;">/月</span></div>
         <div style="font-family:var(--sans);font-size:10px;color:var(--muted);">随时可退</div>
-        <button class="code-btn" style="width:100%;margin-top:4px;min-height:36px;" onclick="handlePurchase('monthly')">选择</button>
+        <button class="paywall-btn" style="padding:8px;font-size:14px;border-radius:7px;min-height:36px;margin-top:4px;" onclick="handlePurchase('monthly')">选择</button>
       </div>
 
       <!-- 两年 -->
-      <div style="border:1.5px solid var(--ink);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;gap:6px;position:relative;">
+      <div id="plan-yearly" onclick="selectPlan('yearly')" style="border:1.5px solid var(--ink);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column;gap:6px;position:relative;cursor:pointer;transition:border 0.15s;">
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:9px;font-weight:600;padding:2px 10px;border-radius:9999px;white-space:nowrap;letter-spacing:0.06em;">最划算</div>
         <div style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--cn-price);letter-spacing:0.06em;">两年有效</div>
         <div style="font-family:var(--bebas);font-size:32px;color:var(--ink);letter-spacing:0.02em;line-height:1;">¥20<span style="font-size:15px;font-family:var(--sans);font-weight:600;color:var(--cn-price);margin-left:4px;">/2年</span></div>
@@ -1702,6 +1702,18 @@ function hidePaywall() {
 
 function handlePaywallBg(e) {
   if (e.target === document.getElementById('paywall')) hidePaywall();
+}
+
+function selectPlan(plan) {
+  const monthly = document.getElementById('plan-monthly');
+  const yearly  = document.getElementById('plan-yearly');
+  if (plan === 'monthly') {
+    monthly.style.border = '1.5px solid var(--ink)';
+    yearly.style.border  = '1px solid var(--rule)';
+  } else {
+    yearly.style.border  = '1.5px solid var(--ink)';
+    monthly.style.border = '1px solid var(--rule)';
+  }
 }
 
 function handlePurchase(plan) {
