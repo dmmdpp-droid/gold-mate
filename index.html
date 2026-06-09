@@ -1711,12 +1711,12 @@ function handlePurchase(plan) {
     : '添加客服微信：goldmate888 付款 ¥20，获取激活码，使用2年';
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(wechat).then(() => {
-      alert('微信号 ' + wechat + ' 已复制\n' + msg);
+      alert('客服微信：' + wechat + ' 已复制\n' + msg);
     }).catch(() => {
-      alert('微信号：' + wechat + '\n请手动复制\n' + msg);
+      alert('客服微信：' + wechat + '\n请手动复制\n' + msg);
     });
   } else {
-    alert('微信号：' + wechat + '\n请手动复制\n' + msg);
+    alert('客服微信：' + wechat + '\n请手动复制\n' + msg);
   }
 }
 
