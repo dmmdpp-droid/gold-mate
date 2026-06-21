@@ -44,7 +44,7 @@ export async function onRequestPost({ request, env }) {
     name: plan.name,
     money: plan.money,
     clientip,
-    device: 'mobile',
+    device: 'h5',
     param: body.plan,
     sign_type: 'MD5',
   };
