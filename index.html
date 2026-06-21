@@ -1036,7 +1036,7 @@ footer {
         <div style="font-family:var(--sans);font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">月付</div>
         <div style="font-family:var(--bebas);font-size:32px;color:var(--ink);letter-spacing:0.02em;line-height:1;">¥5<span style="font-size:13px;font-family:var(--sans);font-weight:300;color:var(--muted);margin-left:2px;">/月</span></div>
         <div style="font-family:var(--sans);font-size:10px;color:var(--muted);">随时可退</div>
-        <button class="paywall-btn" style="padding:8px;font-size:14px;border-radius:7px;min-height:36px;margin-top:4px;" onclick="handlePurchase('monthly')">选择</button>
+        <button class="paywall-btn" style="padding:8px;font-size:14px;border-radius:7px;min-height:36px;margin-top:4px;width:100%;background:#07C160;" onclick="handlePurchase('monthly','wxpay')">微信支付</button>
       </div>
 
       <!-- 两年 -->
@@ -1045,12 +1045,13 @@ footer {
         <div style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--cn-price);letter-spacing:0.06em;">两年有效</div>
         <div style="font-family:var(--bebas);font-size:32px;color:var(--ink);letter-spacing:0.02em;line-height:1;">¥20<span style="font-size:15px;font-family:var(--sans);font-weight:600;color:var(--cn-price);margin-left:4px;">/2年</span></div>
         <div style="font-family:var(--sans);font-size:10px;color:var(--cn-price);">相当于 ¥0.83/月</div>
-        <button class="paywall-btn" style="padding:8px;font-size:14px;border-radius:7px;min-height:36px;margin-top:4px;" onclick="handlePurchase('yearly')">选择</button>
+        <button class="paywall-btn" style="padding:8px;font-size:14px;border-radius:7px;min-height:36px;margin-top:4px;width:100%;background:#07C160;" onclick="handlePurchase('yearly','wxpay')">微信支付</button>
       </div>
 
     </div>
 
-    <div class="code-row">
+    <div id="paywall-msg" style="font-family:var(--sans);font-size:12px;text-align:center;min-height:16px;margin-bottom:4px;"></div>
+  <div class="code-row">
       <input class="code-input" id="code-input" placeholder="已有激活码？输入此处" maxlength="20">
       <button class="code-btn" onclick="redeemCode()">激活</button>
     </div>
@@ -1716,20 +1717,97 @@ function selectPlan(plan) {
   }
 }
 
-function handlePurchase(plan) {
-  const wechat = 'goldmate888';
-  const msg = plan === 'monthly'
-    ? '添加客服微信：goldmate888 付款 ¥5/月，获取激活码'
-    : '添加客服微信：goldmate888 付款 ¥20，获取激活码，使用2年';
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(wechat).then(() => {
-      alert('客服微信：' + wechat + ' 已复制\n' + msg);
-    }).catch(() => {
-      alert('客服微信：' + wechat + '\n请手动复制\n' + msg);
+async function handlePurchase(plan, type) {
+  // type: 'wxpay' 或 'alipay'
+  const pwMsg = document.getElementById('paywall-msg');
+  if (pwMsg) { pwMsg.textContent = '正在创建订单…'; pwMsg.style.color = 'var(--tx2)'; }
+
+  try {
+    const res  = await fetch('/api/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, type }),
     });
-  } else {
-    alert('客服微信：' + wechat + '\n请手动复制\n' + msg);
+    const data = await res.json();
+
+    if (!data.ok) {
+      if (pwMsg) { pwMsg.textContent = '创建订单失败，请重试'; pwMsg.style.color = 'var(--up)'; }
+      return;
+    }
+
+    // 跳转到支付页
+    const orderNo = data.out_trade_no;
+    localStorage.setItem('pending_order', orderNo);
+    localStorage.setItem('pending_plan', plan);
+    window.location.href = data.payurl;
+
+  } catch(e) {
+    if (pwMsg) { pwMsg.textContent = '网络错误，请重试'; pwMsg.style.color = 'var(--up)'; }
   }
+}
+
+// 支付完成后返回页面，轮询激活码
+async function checkPaymentResult() {
+  const orderNo = localStorage.getItem('pending_order');
+  if (!orderNo) return;
+
+  const maxTries = 12; // 最多轮询1分钟
+  let tries = 0;
+
+  const poll = async () => {
+    tries++;
+    try {
+      const res  = await fetch('/api/result?order=' + orderNo);
+      const data = await res.json();
+
+      if (data.ok) {
+        // 支付成功，拿到激活码
+        localStorage.removeItem('pending_order');
+        localStorage.removeItem('pending_plan');
+        showPaymentSuccess(data.code, data.days);
+        return;
+      }
+    } catch(e) {}
+
+    if (tries < maxTries) {
+      setTimeout(poll, 5000);
+    } else {
+      localStorage.removeItem('pending_order');
+    }
+  };
+
+  poll();
+}
+
+function showPaymentSuccess(code, days) {
+  const label = days >= 365 ? Math.round(days/365) + '年'
+              : days >= 30  ? Math.round(days/30) + '个月'
+              : days + '天';
+
+  // 弹出支付成功弹窗
+  const pw = document.getElementById('paywall');
+  pw.innerHTML = `
+    <div class="paywall-box" onclick="event.stopPropagation()">
+      <div class="paywall-title" style="color:var(--dn);">✓ 支付成功</div>
+      <div style="font-family:var(--sans);font-size:13px;color:var(--tx2);margin:8px 0 16px;">您的专属激活码（有效期${label}）</div>
+      <div style="background:var(--rule);border-radius:8px;padding:16px;font-family:var(--bebas);font-size:22px;letter-spacing:0.1em;text-align:center;color:var(--ink);">${code}</div>
+      <button class="paywall-btn" style="margin-top:16px;" onclick="copyAndActivate('${code}')">复制并激活</button>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">激活码仅限一次使用，请妥善保存</div>
+    </div>`;
+  pw.classList.add('show');
+}
+
+function copyAndActivate(code) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).catch(()=>{});
+  }
+  // 填入激活码输入框并激活
+  hidePaywall();
+  showPaywall();
+  setTimeout(() => {
+    const input = document.getElementById('code-input');
+    if (input) { input.value = code; redeemCode(); }
+  }, 300);
 }
 
 async function redeemCode() {
@@ -1900,6 +1978,11 @@ function saveCost() {
     setTimeout(() => updatePos(), 200);
   }
 })();
+
+// 检查是否有待处理的支付结果（从支付页返回时）
+if (localStorage.getItem('pending_order')) {
+  checkPaymentResult();
+}
 
 requestAnimationFrame(() => {
   // 恢复持仓均价（到期状态不恢复，保持默认1000）
