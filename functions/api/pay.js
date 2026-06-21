@@ -1,0 +1,98 @@
+/**
+ * 黄金换算助手 · 创建支付订单
+ * POST /api/pay  { "plan": "monthly" | "yearly", "type": "wxpay" | "alipay" }
+ */
+
+import { createHash } from 'node:crypto';
+
+const PID = '2026062112580447';
+const KEY = 'D5fT7jP2xN9rZ4cB1kM6vQ0sH3gY6888';
+const ZPAY_URL = 'https://zpayz.cn/mapi.php';
+
+const PLANS = {
+  monthly: { name: '黄金换算助手会员月卡', money: '5.00', days: 30 },
+  yearly:  { name: '黄金换算助手会员年卡', money: '20.00', days: 730 },
+};
+
+function md5(str) {
+  return createHash('md5').update(str).digest('hex');
+}
+
+function sign(params) {
+  // 按参数名 ASCII 排序，排除 sign、sign_type、空值
+  const sorted = Object.keys(params)
+    .filter(k => k !== 'sign' && k !== 'sign_type' && params[k] !== '' && params[k] !== null && params[k] !== undefined)
+    .sort()
+    .map(k => `${k}=${params[k]}`)
+    .join('&');
+  return md5(sorted + KEY);
+}
+
+export async function onRequestPost({ request, env }) {
+  const cors = { 'Content-Type': 'application/json; charset=utf-8' };
+
+  let body;
+  try { body = await request.json(); } catch {
+    return new Response(JSON.stringify({ ok: false, reason: 'invalid_request' }), { status: 400, headers: cors });
+  }
+
+  const plan = PLANS[body.plan];
+  if (!plan) {
+    return new Response(JSON.stringify({ ok: false, reason: 'invalid_plan' }), { status: 400, headers: cors });
+  }
+
+  const type = body.type === 'alipay' ? 'alipay' : 'wxpay';
+  const out_trade_no = Date.now() + Math.random().toString(36).slice(2, 8).toUpperCase();
+  const notify_url = 'https://gold-mate.pages.dev/api/notify';
+  const clientip = request.headers.get('CF-Connecting-IP') || '127.0.0.1';
+
+  const params = {
+    pid,
+    type,
+    out_trade_no,
+    notify_url,
+    name: plan.name,
+    money: plan.money,
+    clientip,
+    device: 'mobile',
+    param: body.plan, // 套餐类型，回调时原样返回
+    sign_type: 'MD5',
+  };
+  params.sign = sign(params);
+
+  // 调用 ZPay mapi.php
+  const form = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => form.append(k, v));
+
+  let zpay;
+  try {
+    const res = await fetch(ZPAY_URL, { method: 'POST', body: form });
+    zpay = await res.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, reason: 'zpay_error', detail: e.message }), { headers: cors });
+  }
+
+  if (zpay.code !== 1) {
+    return new Response(JSON.stringify({ ok: false, reason: 'zpay_failed', msg: zpay.msg }), { headers: cors });
+  }
+
+  // payurl2 用于微信H5，payurl 用于支付宝
+  const payurl = type === 'wxpay' ? (zpay.payurl2 || zpay.payurl) : zpay.payurl;
+
+  return new Response(JSON.stringify({
+    ok: true,
+    payurl,
+    out_trade_no,
+    plan: body.plan,
+  }), { headers: cors });
+}
+
+export async function onRequestOptions() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
+}
