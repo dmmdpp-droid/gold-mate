@@ -23,6 +23,14 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const p = Object.fromEntries(url.searchParams);
 
+  // 记录所有回调（调试用）
+  try {
+    await env.GOLD_CODES.put('debug:last_notify', JSON.stringify({
+      time: new Date().toISOString(),
+      params: p
+    }));
+  } catch(e) {}
+
   if (p.trade_status !== 'TRADE_SUCCESS') return new Response('fail');
 
   const expectedSign = makeSign(p);
