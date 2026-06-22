@@ -1751,7 +1751,10 @@ async function checkPaymentResult() {
   const orderNo = localStorage.getItem('pending_order');
   if (!orderNo) return;
 
-  const maxTries = 12; // 最多轮询1分钟
+  // 立即显示等待弹窗
+  showWaitingPaywall();
+
+  const maxTries = 24; // 最多轮询2分钟
   let tries = 0;
 
   const poll = async () => {
@@ -1761,7 +1764,6 @@ async function checkPaymentResult() {
       const data = await res.json();
 
       if (data.ok) {
-        // 支付成功，拿到激活码
         localStorage.removeItem('pending_order');
         localStorage.removeItem('pending_plan');
         showPaymentSuccess(data.code, data.days);
@@ -1770,13 +1772,40 @@ async function checkPaymentResult() {
     } catch(e) {}
 
     if (tries < maxTries) {
+      // 更新倒计时提示
+      const el = document.getElementById('waiting-tip');
+      if (el) el.textContent = '正在查询支付结果…（' + tries + '/' + maxTries + '）';
       setTimeout(poll, 5000);
     } else {
       localStorage.removeItem('pending_order');
+      // 超时：提示手动输入激活码
+      const pw = document.getElementById('paywall');
+      if (pw) {
+        const tip = pw.querySelector('#waiting-tip');
+        if (tip) {
+          tip.textContent = '查询超时，请稍后手动输入激活码，或联系客服微信：goldmate888';
+          tip.style.color = 'var(--up)';
+        }
+      }
     }
   };
 
   poll();
+}
+
+function showWaitingPaywall() {
+  const pw = document.getElementById('paywall');
+  if (!pw) return;
+  pw.innerHTML = `
+    <div class="paywall-box" onclick="event.stopPropagation()">
+      <div class="paywall-title">正在确认支付…</div>
+      <div style="text-align:center;padding:24px 0;">
+        <div style="font-size:36px;">⏳</div>
+      </div>
+      <div id="waiting-tip" style="font-family:var(--sans);font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px;">正在查询支付结果，请稍候…</div>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;">支付完成后将自动显示激活码<br>请勿关闭此页面</div>
+    </div>`;
+  pw.classList.add('show');
 }
 
 function showPaymentSuccess(code, days) {
