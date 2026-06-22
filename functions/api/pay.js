@@ -35,6 +35,7 @@ export async function onRequestPost({ request, env }) {
   const out_trade_no = Date.now() + Math.random().toString(36).slice(2, 6).toUpperCase();
   const notify_url = 'https://gold-mate.pages.dev/api/notify';
   const clientip = request.headers.get('CF-Connecting-IP') || '127.0.0.1';
+  const fp = (body.fp || '').slice(0, 64); // 设备指纹，最多64位
 
   const params = {
     pid: PID,
@@ -46,7 +47,7 @@ export async function onRequestPost({ request, env }) {
     money: plan.money,
     clientip,
     device: 'h5',
-    param: body.plan,
+    param: body.plan + '|' + fp, // 格式：plan|fingerprint
     sign_type: 'MD5',
   };
   params.sign = makeSign(params);

@@ -1,3 +1,9 @@
+/**
+ * 黄金换算助手 · ZPay 支付回调（指纹方案）
+ * GET /api/notify
+ * param 字段格式：plan|fingerprint
+ */
+
 import { md5 } from './_md5.js';
 
 const KEY = 'D5fT7jP2xN9rZ4cB1kM6vQ0sH3gY6888';
@@ -12,52 +18,55 @@ function makeSign(params) {
   return md5(sorted + KEY);
 }
 
-function generateCode(prefix) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return `${prefix}-${code}`;
-}
-
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const p = Object.fromEntries(url.searchParams);
 
-  // 记录所有回调（调试用）
+  // 记录回调（调试用）
   try {
     await env.GOLD_CODES.put('debug:last_notify', JSON.stringify({
-      time: new Date().toISOString(),
-      params: p
+      time: new Date().toISOString(), params: p
     }));
-  } catch(e) {}
+  } catch {}
 
   if (p.trade_status !== 'TRADE_SUCCESS') return new Response('fail');
 
-  // 暂时跳过签名验证，先确保流程跑通
+  // 签名验证（暂时跳过）
   // const expectedSign = makeSign(p);
   // if (expectedSign !== p.sign) return new Response('sign error');
 
+  // 防重复处理
   const orderKey = `order:${p.out_trade_no}`;
   try {
     const existing = await env.GOLD_CODES.get(orderKey);
     if (existing) return new Response('success');
   } catch {}
 
-  const plan = p.param || 'yearly';
+  // 解析 param：格式为 "plan|fingerprint"
+  const paramParts = (p.param || '').split('|');
+  const plan = paramParts[0] || 'yearly';
+  const fp = paramParts[1] || '';
   const days = PLAN_DAYS[plan] || 730;
-  const until = Date.now() + 365 * 24 * 60 * 60 * 1000;
-  const prefix = plan === 'monthly' ? 'M' : 'Y';
+  const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
 
-  let code, exists, attempts = 0;
-  do {
-    code = generateCode(prefix);
-    try { exists = await env.GOLD_CODES.get(code); } catch { exists = null; }
-    attempts++;
-  } while (exists && attempts < 10);
+  // 写入会员记录（按指纹）
+  if (fp) {
+    await env.GOLD_CODES.put(`member:${fp}`, JSON.stringify({
+      plan, days, expiry,
+      order: p.out_trade_no,
+      time: Date.now(),
+    }));
+  }
 
-  await env.GOLD_CODES.put(code, JSON.stringify({ days, until, used: false, order: p.out_trade_no }));
-  await env.GOLD_CODES.put(orderKey, JSON.stringify({ code, plan, money: p.money, time: Date.now() }));
-  await env.GOLD_CODES.put(`result:${p.out_trade_no}`, JSON.stringify({ code, plan, days }));
+  // 写入订单记录
+  await env.GOLD_CODES.put(orderKey, JSON.stringify({
+    fp, plan, money: p.money, expiry, time: Date.now()
+  }));
+
+  // 写入轮询结果（前端查询用）
+  await env.GOLD_CODES.put(`result:${p.out_trade_no}`, JSON.stringify({
+    fp, plan, days, expiry
+  }));
 
   return new Response('success');
 }
