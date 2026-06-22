@@ -1747,9 +1747,12 @@ async function handlePurchase(plan, type) {
 }
 
 // 支付完成后返回页面，轮询激活码
+let _polling = false;
 async function checkPaymentResult() {
   const orderNo = localStorage.getItem('pending_order');
   if (!orderNo) return;
+  if (_polling) return; // 防止重复轮询
+  _polling = true;
 
   // 立即显示等待弹窗
   showWaitingPaywall();
@@ -1764,6 +1767,7 @@ async function checkPaymentResult() {
       const data = await res.json();
 
       if (data.ok) {
+        _polling = false;
         localStorage.removeItem('pending_order');
         localStorage.removeItem('pending_plan');
         showPaymentSuccess(data.code, data.days);
@@ -1777,6 +1781,7 @@ async function checkPaymentResult() {
       if (el) el.textContent = '正在查询支付结果…（' + tries + '/' + maxTries + '）';
       setTimeout(poll, 5000);
     } else {
+      _polling = false;
       localStorage.removeItem('pending_order');
       // 超时：提示手动输入激活码
       const pw = document.getElementById('paywall');
@@ -2027,6 +2032,13 @@ function saveCost() {
 if (localStorage.getItem('pending_order')) {
   checkPaymentResult();
 }
+
+// 用户从微信/其他App切回来时自动触发轮询
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && localStorage.getItem('pending_order')) {
+    checkPaymentResult();
+  }
+});
 
 requestAnimationFrame(() => {
   // 恢复持仓均价（到期状态不恢复，保持默认1000）
