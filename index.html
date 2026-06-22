@@ -1784,30 +1784,45 @@ function showPaymentSuccess(code, days) {
               : days >= 30  ? Math.round(days/30) + '个月'
               : days + '天';
 
-  // 弹出支付成功弹窗
   const pw = document.getElementById('paywall');
   pw.innerHTML = `
     <div class="paywall-box" onclick="event.stopPropagation()">
       <div class="paywall-title" style="color:var(--dn);">✓ 支付成功</div>
       <div style="font-family:var(--sans);font-size:13px;color:var(--tx2);margin:8px 0 16px;">您的专属激活码（有效期${label}）</div>
-      <div style="background:var(--rule);border-radius:8px;padding:16px;font-family:var(--bebas);font-size:22px;letter-spacing:0.1em;text-align:center;color:var(--ink);">${code}</div>
-      <button class="paywall-btn" style="margin-top:16px;" onclick="copyAndActivate('${code}')">复制并激活</button>
-      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">激活码仅限一次使用，请妥善保存</div>
+      <div id="code-display" style="background:var(--rule);border-radius:8px;padding:16px;font-family:var(--bebas);font-size:22px;letter-spacing:0.1em;text-align:center;color:var(--ink);user-select:all;">${code}</div>
+      <button class="paywall-btn" style="margin-top:12px;background:#07C160;" onclick="doCopyCode('${code}')">复制激活码</button>
+      <button class="paywall-btn" style="margin-top:8px;" onclick="doActivateCode('${code}')">直接激活</button>
+      <div id="copy-tip" style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">激活码仅限一次使用，请妥善保存</div>
     </div>`;
   pw.classList.add('show');
 }
 
-function copyAndActivate(code) {
+function doCopyCode(code) {
+  const tip = document.getElementById('copy-tip');
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(code).catch(()=>{});
+    navigator.clipboard.writeText(code).then(() => {
+      if (tip) { tip.textContent = '✓ 已复制到剪贴板'; tip.style.color = 'var(--dn)'; }
+    }).catch(() => {
+      if (tip) { tip.textContent = '请长按激活码手动复制'; tip.style.color = 'var(--up)'; }
+    });
+  } else {
+    if (tip) { tip.textContent = '请长按激活码手动复制'; tip.style.color = 'var(--up)'; }
   }
-  // 填入激活码输入框并激活
+}
+
+function doActivateCode(code) {
   hidePaywall();
-  showPaywall();
+  // 恢复付费墙原始内容后填入激活码并自动激活
   setTimeout(() => {
-    const input = document.getElementById('code-input');
-    if (input) { input.value = code; redeemCode(); }
-  }, 300);
+    showPaywall();
+    setTimeout(() => {
+      const input = document.getElementById('code-input');
+      if (input) {
+        input.value = code;
+        redeemCode();
+      }
+    }, 100);
+  }, 100);
 }
 
 async function redeemCode() {
