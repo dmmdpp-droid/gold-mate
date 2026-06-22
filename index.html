@@ -1069,6 +1069,46 @@ footer {
 <script>
 const TROY = 31.1035;
 
+// ── 设备指纹 ──
+async function getFingerprint() {
+  const cached = localStorage.getItem('_fp');
+  if (cached) return cached;
+
+  const components = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || '',
+    navigator.platform || '',
+  ];
+
+  // Canvas 指纹
+  try {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('goldmate', 2, 15);
+    components.push(c.toDataURL());
+  } catch(e) {}
+
+  const str = components.join('|');
+  // 简单哈希
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const fp = Math.abs(hash).toString(36) + str.length.toString(36);
+  localStorage.setItem('_fp', fp);
+  return fp;
+}
+
 let lastIdx = -1;
 let MIN = 500, MAX = 11000;  // 粗调全范围
 let currentVal = 4501;
@@ -1684,6 +1724,8 @@ function unlock(days) {
   const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
   localStorage.setItem('gold_unlocked', '1');
   localStorage.setItem('gold_expiry', expiry.toString());
+  localStorage.removeItem('paid_code');
+  localStorage.removeItem('paid_days');
   const inp = document.getElementById('pos-qty');
   inp.removeAttribute('readonly');
   inp.classList.remove('locked');
@@ -1718,15 +1760,16 @@ function selectPlan(plan) {
 }
 
 async function handlePurchase(plan, type) {
-  // type: 'wxpay' 或 'alipay'
   const pwMsg = document.getElementById('paywall-msg');
   if (pwMsg) { pwMsg.textContent = '正在创建订单…'; pwMsg.style.color = 'var(--tx2)'; }
+
+  const fp = await getFingerprint();
 
   try {
     const res  = await fetch('/api/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, type }),
+      body: JSON.stringify({ plan, type, fp }),
     });
     const data = await res.json();
 
@@ -1770,7 +1813,8 @@ async function checkPaymentResult() {
         _polling = false;
         localStorage.removeItem('pending_order');
         localStorage.removeItem('pending_plan');
-        showPaymentSuccess(data.code, data.days);
+        // 指纹方案：直接解锁，不需要激活码
+        unlockByFingerprint(data.expiry, data.plan);
         return;
       }
     } catch(e) {}
@@ -1813,7 +1857,15 @@ function showWaitingPaywall() {
   pw.classList.add('show');
 }
 
-function showPaymentSuccess(code, days) {
+function unlockByFingerprint(expiry, plan) {
+  // 指纹方案：直接解锁，存服务端，本地只存到期时间用于显示
+  const days = Math.round((expiry - Date.now()) / (24 * 60 * 60 * 1000));
+  localStorage.setItem('gold_unlocked', '1');
+  localStorage.setItem('gold_expiry', expiry.toString());
+  localStorage.removeItem('paid_code');
+  localStorage.removeItem('paid_days');
+  localStorage.removeItem('pending_order');
+
   const label = days >= 365 ? Math.round(days/365) + '年'
               : days >= 30  ? Math.round(days/30) + '个月'
               : days + '天';
@@ -1822,41 +1874,10 @@ function showPaymentSuccess(code, days) {
   pw.innerHTML = `
     <div class="paywall-box" onclick="event.stopPropagation()">
       <div class="paywall-title" style="color:var(--dn);">✓ 支付成功</div>
-      <div style="font-family:var(--sans);font-size:13px;color:var(--tx2);margin:8px 0 16px;">您的专属激活码（有效期${label}）</div>
-      <div id="code-display" style="background:var(--rule);border-radius:8px;padding:16px;font-family:var(--bebas);font-size:22px;letter-spacing:0.1em;text-align:center;color:var(--ink);user-select:all;">${code}</div>
-      <button class="paywall-btn" style="margin-top:12px;background:#07C160;" onclick="doCopyCode('${code}')">复制激活码</button>
-      <button class="paywall-btn" style="margin-top:8px;" onclick="doActivateCode('${code}')">直接激活</button>
-      <div id="copy-tip" style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">激活码仅限一次使用，请妥善保存</div>
+      <div style="font-family:var(--sans);font-size:14px;color:var(--tx2);text-align:center;margin:16px 0;">会员已激活，有效期 ${label}</div>
+      <button class="paywall-btn" style="background:#07C160;" onclick="hidePaywall();location.reload();">开始使用</button>
     </div>`;
   pw.classList.add('show');
-}
-
-function doCopyCode(code) {
-  const tip = document.getElementById('copy-tip');
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(code).then(() => {
-      if (tip) { tip.textContent = '✓ 已复制到剪贴板'; tip.style.color = 'var(--dn)'; }
-    }).catch(() => {
-      if (tip) { tip.textContent = '请长按激活码手动复制'; tip.style.color = 'var(--up)'; }
-    });
-  } else {
-    if (tip) { tip.textContent = '请长按激活码手动复制'; tip.style.color = 'var(--up)'; }
-  }
-}
-
-function doActivateCode(code) {
-  hidePaywall();
-  // 恢复付费墙原始内容后填入激活码并自动激活
-  setTimeout(() => {
-    showPaywall();
-    setTimeout(() => {
-      const input = document.getElementById('code-input');
-      if (input) {
-        input.value = code;
-        redeemCode();
-      }
-    }, 100);
-  }, 100);
 }
 
 async function redeemCode() {
@@ -1934,6 +1955,29 @@ function saveCost() {
 }
 
 // 初始化付费/试用状态
+// 启动时用指纹验证服务端会员状态
+(async function verifyMembership() {
+  try {
+    const fp = await getFingerprint();
+    const res = await fetch('/api/member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fp }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // 服务端确认是会员，更新本地状态
+      localStorage.setItem('gold_unlocked', '1');
+      localStorage.setItem('gold_expiry', data.expiry.toString());
+    } else if (data.reason === 'expired') {
+      // 服务端确认已过期，清除本地会员状态
+      localStorage.removeItem('gold_unlocked');
+      localStorage.removeItem('gold_expiry');
+    }
+    // 如果请求失败，保持本地状态不变（离线兼容）
+  } catch(e) {}
+})();
+
 (function initPaid() {
   const inp = document.getElementById('pos-qty');
 
@@ -2035,10 +2079,26 @@ if (localStorage.getItem('pending_order')) {
 
 // 用户从微信/其他App切回来时自动触发轮询
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible' && localStorage.getItem('pending_order')) {
+  if (document.visibilityState !== 'visible') return;
+  // 如果有待显示的激活码，直接展示
+  const paidCode = localStorage.getItem('paid_code');
+  const paidDays = localStorage.getItem('paid_days');
+  if (paidCode && paidDays) {
+    showPaymentSuccess(paidCode, parseInt(paidDays));
+    return;
+  }
+  // 否则轮询支付结果
+  if (localStorage.getItem('pending_order')) {
     checkPaymentResult();
   }
 });
+
+// 页面加载时检查是否有已支付待激活的码
+const _savedCode = localStorage.getItem('paid_code');
+const _savedDays = localStorage.getItem('paid_days');
+if (_savedCode && _savedDays && !isPaid()) {
+  showPaymentSuccess(_savedCode, parseInt(_savedDays));
+}
 
 requestAnimationFrame(() => {
   // 恢复持仓均价（到期状态不恢复，保持默认1000）
