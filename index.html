@@ -1826,15 +1826,9 @@ async function checkPaymentResult() {
     } else {
       _polling = false;
       localStorage.removeItem('pending_order');
-      // 超时：提示手动输入激活码
-      const pw = document.getElementById('paywall');
-      if (pw) {
-        const tip = pw.querySelector('#waiting-tip');
-        if (tip) {
-          tip.textContent = '查询超时，请稍后手动输入激活码，或联系客服微信：goldmate888';
-          tip.style.color = 'var(--up)';
-        }
-      }
+      localStorage.removeItem('pending_plan');
+      // 超时：关闭等待弹窗，恢复正常付费墙
+      hidePaywall();
     }
   };
 
@@ -1851,9 +1845,17 @@ function showWaitingPaywall() {
         <div style="font-size:36px;">⏳</div>
       </div>
       <div id="waiting-tip" style="font-family:var(--sans);font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px;">正在查询支付结果，请稍候…</div>
-      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;">支付完成后将自动显示激活码<br>请勿关闭此页面</div>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-bottom:16px;">支付完成后将自动显示激活结果</div>
+      <button class="paywall-dismiss" onclick="cancelPaymentWait()">未完成支付，返回</button>
     </div>`;
   pw.classList.add('show');
+}
+
+function cancelPaymentWait() {
+  _polling = false;
+  localStorage.removeItem('pending_order');
+  localStorage.removeItem('pending_plan');
+  hidePaywall();
 }
 
 function unlockByFingerprint(expiry, plan, code) {
