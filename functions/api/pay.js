@@ -5,7 +5,7 @@ const KEY = 'D5fT7jP2xN9rZ4cB1kM6vQ0sH3gY6888';
 const ZPAY_URL = 'https://zpayz.cn/mapi.php';
 
 const PLANS = {
-  monthly: { name: '黄金换算助手会员月卡', money: '0.01', days: 30 },
+  monthly: { name: '黄金换算助手会员月卡', money: '5.00', days: 30 },
   yearly:  { name: '黄金换算助手会员两年卡', money: '20.00', days: 730 },
 };
 
@@ -42,7 +42,7 @@ export async function onRequestPost({ request, env }) {
     type,
     out_trade_no,
     notify_url,
-    return_url: 'https://gold-mate.pages.dev/return',
+    return_url: 'https://gold-mate.pages.dev',
     name: plan.name,
     money: plan.money,
     clientip,
