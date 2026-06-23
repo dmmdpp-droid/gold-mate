@@ -1813,8 +1813,7 @@ async function checkPaymentResult() {
         _polling = false;
         localStorage.removeItem('pending_order');
         localStorage.removeItem('pending_plan');
-        // 指纹方案：直接解锁，不需要激活码
-        unlockByFingerprint(data.expiry, data.plan);
+        unlockByFingerprint(data.expiry, data.plan, data.code);
         return;
       }
     } catch(e) {}
@@ -1857,8 +1856,7 @@ function showWaitingPaywall() {
   pw.classList.add('show');
 }
 
-function unlockByFingerprint(expiry, plan) {
-  // 指纹方案：直接解锁，存服务端，本地只存到期时间用于显示
+function unlockByFingerprint(expiry, plan, code) {
   const days = Math.round((expiry - Date.now()) / (24 * 60 * 60 * 1000));
   localStorage.setItem('gold_unlocked', '1');
   localStorage.setItem('gold_expiry', expiry.toString());
@@ -1873,11 +1871,29 @@ function unlockByFingerprint(expiry, plan) {
   const pw = document.getElementById('paywall');
   pw.innerHTML = `
     <div class="paywall-box" onclick="event.stopPropagation()">
-      <div class="paywall-title" style="color:var(--dn);">✓ 支付成功</div>
-      <div style="font-family:var(--sans);font-size:14px;color:var(--tx2);text-align:center;margin:16px 0;">会员已激活，有效期 ${label}</div>
-      <button class="paywall-btn" style="background:#07C160;" onclick="hidePaywall();location.reload();">开始使用</button>
+      <div class="paywall-title" style="color:var(--dn);">✓ 会员已激活</div>
+      <div style="font-family:var(--sans);font-size:13px;color:var(--tx2);text-align:center;margin:8px 0 16px;">有效期 ${label}</div>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);margin-bottom:6px;">您的专属激活码</div>
+      <div id="code-display" style="background:var(--rule);border-radius:8px;padding:14px;font-family:var(--bebas);font-size:22px;letter-spacing:0.1em;text-align:center;color:var(--ink);user-select:all;">${code || '—'}</div>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin:10px 0 14px;line-height:1.6;">建议截图保存，或复制到备忘录 / 微信文件传输助手<br>换机后可重新输入激活码恢复会员</div>
+      <button class="paywall-btn" style="background:#07C160;margin-bottom:8px;" id="copy-code-btn">复制激活码</button>
+      <button class="paywall-btn" style="background:var(--ink);" onclick="hidePaywall();location.reload();">开始使用</button>
     </div>`;
   pw.classList.add('show');
+
+  if (code) {
+    document.getElementById('copy-code-btn').addEventListener('click', function() {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => {
+          this.textContent = '✓ 已复制';
+        }).catch(() => {
+          this.textContent = '请长按激活码复制';
+        });
+      } else {
+        this.textContent = '请长按激活码复制';
+      }
+    });
+  }
 }
 
 async function redeemCode() {
