@@ -1,7 +1,6 @@
 /**
- * 黄金换算助手 · ZPay 支付回调（指纹方案）
+ * 黄金换算助手 · ZPay 支付回调（双轨方案：指纹+激活码）
  * GET /api/notify
- * param 字段格式：plan|fingerprint
  */
 
 import { md5 } from './_md5.js';
@@ -16,6 +15,13 @@ function makeSign(params) {
     .map(k => `${k}=${params[k]}`)
     .join('&');
   return md5(sorted + KEY);
+}
+
+function generateCode(prefix) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return `${prefix}-${code}`;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -48,24 +54,37 @@ export async function onRequestGet({ request, env }) {
   const fp = paramParts[1] || '';
   const days = PLAN_DAYS[plan] || 730;
   const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+  const until = Date.now() + 365 * 24 * 60 * 60 * 1000; // 激活码1年内有效
+  const prefix = plan === 'monthly' ? 'M' : 'Y';
 
-  // 写入会员记录（按指纹）
+  // 生成唯一激活码
+  let code, exists, attempts = 0;
+  do {
+    code = generateCode(prefix);
+    try { exists = await env.GOLD_CODES.get(code); } catch { exists = null; }
+    attempts++;
+  } while (exists && attempts < 10);
+
+  // 1. 写入激活码记录
+  await env.GOLD_CODES.put(code, JSON.stringify({
+    days, until, used: false, order: p.out_trade_no
+  }));
+
+  // 2. 写入指纹会员记录
   if (fp) {
     await env.GOLD_CODES.put(`member:${fp}`, JSON.stringify({
-      plan, days, expiry,
-      order: p.out_trade_no,
-      time: Date.now(),
+      plan, days, expiry, order: p.out_trade_no, time: Date.now()
     }));
   }
 
-  // 写入订单记录
+  // 3. 写入订单记录
   await env.GOLD_CODES.put(orderKey, JSON.stringify({
-    fp, plan, money: p.money, expiry, time: Date.now()
+    fp, plan, money: p.money, expiry, code, time: Date.now()
   }));
 
-  // 写入轮询结果（前端查询用）
+  // 4. 写入轮询结果（同时包含激活码和到期时间）
   await env.GOLD_CODES.put(`result:${p.out_trade_no}`, JSON.stringify({
-    fp, plan, days, expiry
+    fp, plan, days, expiry, code
   }));
 
   return new Response('success');
