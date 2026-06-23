@@ -1835,6 +1835,29 @@ async function checkPaymentResult() {
   poll();
 }
 
+function showMemberInfo(expiryTs) {
+  const expiry = new Date(expiryTs);
+  const expiryStr = expiry.getFullYear() + '/' + (expiry.getMonth()+1) + '/' + expiry.getDate();
+  const daysLeft = Math.ceil((expiryTs - Date.now()) / (24 * 60 * 60 * 1000));
+
+  const pw = document.getElementById('paywall');
+  pw.innerHTML = `
+    <div class="paywall-box" onclick="event.stopPropagation()" style="padding:24px 20px;">
+      <div style="font-family:var(--bebas);font-size:22px;letter-spacing:0.08em;color:var(--dn);text-align:center;margin-bottom:16px;">Pro 会员</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:12px;">
+        <span style="font-family:var(--sans);font-size:12px;color:var(--muted);">有效期至</span>
+        <span style="font-family:var(--serif);font-size:16px;color:var(--ink);">${expiryStr}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:20px;">
+        <span style="font-family:var(--sans);font-size:12px;color:var(--muted);">剩余天数</span>
+        <span style="font-family:var(--bebas);font-size:20px;color:var(--ink);">${daysLeft} 天</span>
+      </div>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-bottom:16px;">如需换机恢复，请输入激活码</div>
+      <button class="paywall-dismiss" onclick="hidePaywall()">关闭</button>
+    </div>`;
+  pw.classList.add('show');
+}
+
 function showWaitingPaywall() {
   const pw = document.getElementById('paywall');
   if (!pw) return;
@@ -1872,12 +1895,12 @@ function unlockByFingerprint(expiry, plan, code) {
 
   const pw = document.getElementById('paywall');
   pw.innerHTML = `
-    <div class="paywall-box" onclick="event.stopPropagation()" style="padding:20px 20px 24px;">
+    <div class="paywall-box" onclick="event.stopPropagation()" style="padding:20px 20px 24px;max-height:85vh;overflow-y:auto;">
       <div style="font-family:var(--bebas);font-size:20px;letter-spacing:0.08em;color:var(--dn);text-align:center;margin-bottom:4px;">✓ 会员已激活</div>
       <div style="font-family:var(--sans);font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;">有效期 ${label}</div>
       <div style="font-family:var(--sans);font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center;">您的专属激活码</div>
       <div id="code-display" style="background:var(--rule);border-radius:8px;padding:12px;font-family:var(--bebas);font-size:20px;letter-spacing:0.1em;text-align:center;color:var(--ink);user-select:all;margin-bottom:10px;">${code || '—'}</div>
-      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px;line-height:1.6;">建议截图保存，或复制到备忘录 / 微信文件传输助手<br>换机后可重新输入激活码恢复会员</div>
+      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px;line-height:1.8;">📸 建议截图保存<br>或复制到备忘录 / 微信文件传输助手<br>换机后可重新输入激活码恢复会员</div>
       <button class="paywall-btn" style="background:#07C160;margin-bottom:8px;padding:12px;" id="copy-code-btn">复制激活码</button>
       <button class="paywall-btn" style="background:var(--ink);padding:12px;" onclick="hidePaywall();location.reload();">开始使用</button>
     </div>`;
@@ -2048,6 +2071,10 @@ function saveCost() {
       if (memberStatusEl) {
         memberStatusEl.textContent = expiryStr ? '会员至 ' + expiryStr : '会员';
         memberStatusEl.style.color = 'var(--dn)';
+        memberStatusEl.style.cursor = 'pointer';
+        memberStatusEl.style.textDecoration = 'underline';
+        memberStatusEl.style.textUnderlineOffset = '3px';
+        memberStatusEl.onclick = function() { showMemberInfo(expiryTs); };
       }
     }
 
@@ -2132,5 +2159,65 @@ requestAnimationFrame(() => {
   fetchRate();
 });
 </script>
+<!-- 微信浏览器引导遮罩 -->
+<div id="wechat-mask" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:9999;touch-action:none;">
+
+  <!-- 右上角虚线箭头 -->
+  <svg style="position:absolute;top:10px;right:10px;width:80px;height:80px;" viewBox="0 0 80 80">
+    <path d="M70,8 Q72,30 55,45" stroke="white" stroke-width="2" fill="none" stroke-dasharray="5,4" stroke-linecap="round"/>
+    <polygon points="50,50 60,42 56,54" fill="white"/>
+  </svg>
+
+  <!-- 内容区域，垂直居中 -->
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:85%;max-width:300px;">
+
+    <!-- 第一步 -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="24" height="6" viewBox="0 0 24 6">
+          <circle cx="3" cy="3" r="3" fill="white"/>
+          <circle cx="12" cy="3" r="3" fill="white"/>
+          <circle cx="21" cy="3" r="3" fill="white"/>
+        </svg>
+      </div>
+      <div>
+        <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">第一步</div>
+        <div style="font-family:'Noto Sans SC',sans-serif;font-size:15px;color:white;line-height:1.4;">点击右上角 <span style="font-weight:600;">···</span></div>
+      </div>
+    </div>
+
+    <!-- 分隔线 -->
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.2);margin:0 26px 20px;"></div>
+
+    <!-- 第二步 -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:40px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:26px;">
+        🌐
+      </div>
+      <div>
+        <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">第二步</div>
+        <div style="font-family:'Noto Sans SC',sans-serif;font-size:15px;color:white;line-height:1.4;">在弹出菜单中<br>点击 <span style="font-weight:600;">浏览器打开</span></div>
+      </div>
+    </div>
+
+    <!-- 提示文字 -->
+    <div style="font-family:'Noto Sans SC',sans-serif;font-size:12px;color:rgba(255,255,255,0.4);text-align:center;">
+      在手机浏览器中打开，体验完整功能
+    </div>
+
+  </div>
+</div>
+
+<script>
+// 检测微信浏览器，显示引导遮罩
+(function() {
+  const ua = navigator.userAgent.toLowerCase();
+  const isWeChat = ua.indexOf('micromessenger') !== -1;
+  if (isWeChat) {
+    document.getElementById('wechat-mask').style.display = 'block';
+  }
+})();
+</script>
+
 </body>
 </html>
