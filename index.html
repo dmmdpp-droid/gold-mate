@@ -1611,11 +1611,13 @@ const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone === true;
 
+const _inWechat = /micromessenger/i.test(navigator.userAgent);
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  // Android：显示安装横幅
-  if (!isStandalone && !sessionStorage.getItem('pwa_dismissed')) {
+  // 微信内不弹，已弹过不再弹
+  if (!isStandalone && !_inWechat && !localStorage.getItem('pwa_dismissed')) {
     document.getElementById('pwa-banner').classList.add('show');
   }
 });
@@ -1631,12 +1633,12 @@ function installPWA() {
 }
 
 function dismissPWA() {
-  sessionStorage.setItem('pwa_dismissed', '1');
+  localStorage.setItem('pwa_dismissed', '1');
   document.getElementById('pwa-banner').classList.remove('show');
 }
 
-// iOS：显示手动添加引导
-if (isIOS && !isStandalone && !sessionStorage.getItem('pwa_dismissed')) {
+// iOS：显示手动添加引导（微信内不弹，已弹过不再弹）
+if (isIOS && !isStandalone && !_inWechat && !localStorage.getItem('pwa_dismissed')) {
   const banner = document.getElementById('pwa-banner');
   document.getElementById('pwa-desc').textContent =
     '点击底部分享按钮 → 选择「添加到主屏幕」，像 App 一样使用黄金换算助手。';
@@ -2162,46 +2164,44 @@ requestAnimationFrame(() => {
 <!-- 微信浏览器引导遮罩 -->
 <div id="wechat-mask" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:9999;touch-action:none;">
 
-  <!-- 右上角虚线箭头 -->
-  <svg style="position:absolute;top:10px;right:10px;width:80px;height:80px;" viewBox="0 0 80 80">
-    <path d="M70,8 Q72,30 55,45" stroke="white" stroke-width="2" fill="none" stroke-dasharray="5,4" stroke-linecap="round"/>
-    <polygon points="50,50 60,42 56,54" fill="white"/>
+  <!-- 右上角虚线弧形箭头 -->
+  <svg style="position:absolute;top:8px;right:8px;width:90px;height:90px;" viewBox="0 0 90 90">
+    <path d="M78,6 C82,28 74,50 58,62" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="6,5" stroke-linecap="round"/>
+    <polygon points="52,68 64,60 58,72" fill="white"/>
   </svg>
 
-  <!-- 内容区域，垂直居中 -->
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:85%;max-width:300px;">
+  <!-- 内容区域 -->
+  <div style="position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:280px;">
 
     <!-- 第一步 -->
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-      <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="24" height="6" viewBox="0 0 24 6">
-          <circle cx="3" cy="3" r="3" fill="white"/>
-          <circle cx="12" cy="3" r="3" fill="white"/>
-          <circle cx="21" cy="3" r="3" fill="white"/>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="20" height="5" viewBox="0 0 20 5">
+          <circle cx="2.5" cy="2.5" r="2.5" fill="white"/>
+          <circle cx="10" cy="2.5" r="2.5" fill="white"/>
+          <circle cx="17.5" cy="2.5" r="2.5" fill="white"/>
         </svg>
       </div>
-      <div>
-        <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">第一步</div>
-        <div style="font-family:'Noto Sans SC',sans-serif;font-size:15px;color:white;line-height:1.4;">点击右上角 <span style="font-weight:600;">···</span></div>
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;">
+        <span style="color:rgba(255,255,255,0.5);font-size:11px;">第一步：</span>点击右上角
       </div>
     </div>
 
-    <!-- 分隔线 -->
-    <div style="width:1px;height:20px;background:rgba(255,255,255,0.2);margin:0 26px 20px;"></div>
+    <!-- 竖线 -->
+    <div style="width:1.5px;height:16px;background:rgba(255,255,255,0.25);margin:0 21px 10px;"></div>
 
     <!-- 第二步 -->
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:40px;">
-      <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:26px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:32px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:22px;">
         🌐
       </div>
-      <div>
-        <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">第二步</div>
-        <div style="font-family:'Noto Sans SC',sans-serif;font-size:15px;color:white;line-height:1.4;">在弹出菜单中<br>点击 <span style="font-weight:600;">浏览器打开</span></div>
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;">
+        <span style="color:rgba(255,255,255,0.5);font-size:11px;">第二步：</span>在弹出菜单中，点击浏览器打开
       </div>
     </div>
 
-    <!-- 提示文字 -->
-    <div style="font-family:'Noto Sans SC',sans-serif;font-size:12px;color:rgba(255,255,255,0.4);text-align:center;">
+    <!-- 底部提示 -->
+    <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);text-align:center;">
       在手机浏览器中打开，体验完整功能
     </div>
 
