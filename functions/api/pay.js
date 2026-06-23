@@ -42,7 +42,7 @@ export async function onRequestPost({ request, env }) {
     type,
     out_trade_no,
     notify_url,
-    return_url: 'https://gold-mate.pages.dev',
+    return_url: 'https://gold-mate.pages.dev/return',
     name: plan.name,
     money: plan.money,
     clientip,
