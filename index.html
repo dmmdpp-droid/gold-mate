@@ -15,7 +15,6 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 :root {
   --paper:   #F6F3EE;
@@ -67,6 +66,8 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 8px;
 }
 
 .masthead-title {
@@ -78,7 +79,8 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 55vw;
+  max-width: 50vw;
+  flex-shrink: 1;
 }
 
 .masthead-right {
@@ -88,12 +90,13 @@ body {
 
 .masthead-date {
   font-family: var(--sans);
-  font-size: clamp(11px, 3.5vw, 15px);
+  font-size: clamp(10px, 3vw, 14px);
   font-weight: 400;
   color: #5C4510;
   letter-spacing: 0.02em;
   text-align: right;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 
@@ -1065,7 +1068,7 @@ footer {
 <footer>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
   <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);cursor:default;"></span>
-  <span class="ft-r">V 1.7.1 · 0625</span>
+  <span class="ft-r">V 1.7.2 · 0629</span>
 </footer>
 
 <script>
