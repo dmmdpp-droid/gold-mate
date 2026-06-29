@@ -2,6 +2,14 @@
 
 ---
 
+## V 1.7.2 · 20260629
+
+**修复**
+- 华为安卓大字体模式下 header 标题/日期溢出换行（去除重复 `text-size-adjust`，masthead-top 加 `flex-wrap:nowrap`，日期加 `flex-shrink:0`，标题字号进一步收紧）
+- 小米浏览器"添加到桌面"灰色问题（`manifest.json` `start_url` 改为 `/`，新增 `scope` 字段）
+
+---
+
 ## V 1.7.1 · 20260625
 
 **修复**
