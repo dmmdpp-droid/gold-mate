@@ -45,6 +45,7 @@ export async function onRequestPost({ request, env }) {
       PhoneNumber: phone,
       SignName: '速通互联验证码',
       TemplateCode: '100001',
+      TemplateParam: JSON.stringify({ code: '', min: '5' }),
       CodeLength: '4',
       ExpireTime: '300', // 5分钟有效
     }, ACCESS_KEY_ID, ACCESS_KEY_SECRET);
