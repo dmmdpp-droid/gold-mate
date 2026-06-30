@@ -11,7 +11,12 @@ export function md5(str) {
   const n = utf8.length;
   const state = [1732584193,-271733879,-1732584194,271733878];
   let i;
-  const x = [];
+
+  // FIX: 先按需要的总长度（含padding+length字段）用0填满，避免稀疏数组导致
+  // undefined 参与运算时把轮常量 t 一并吞掉（NaN & mask = 0 的副作用）
+  const totalWords = (((n+8)>>6)+1)*16;
+  const x = new Array(totalWords).fill(0);
+
   for(i=0;i<n;i++) x[i>>2]|=utf8.charCodeAt(i)<<(i%4*8);
   x[i>>2]|=0x80<<(i%4*8);
   x[(((n+8)>>6)<<4)+14]=n*8;
