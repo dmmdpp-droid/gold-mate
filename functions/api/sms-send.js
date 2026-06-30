@@ -10,6 +10,15 @@ const ENDPOINT = 'dypnsapi.aliyuncs.com';
 export async function onRequestPost({ request, env }) {
   const ACCESS_KEY_ID = env.ALIYUN_AK_ID;
   const ACCESS_KEY_SECRET = env.ALIYUN_AK_SECRET;
+
+  // 调试：检查环境变量是否读取到
+  if (!ACCESS_KEY_ID || !ACCESS_KEY_SECRET) {
+    return new Response(JSON.stringify({
+      ok: false, reason: 'env_missing',
+      hasId: !!ACCESS_KEY_ID, hasSecret: !!ACCESS_KEY_SECRET,
+      idLen: ACCESS_KEY_ID ? ACCESS_KEY_ID.length : 0
+    }), { headers: { 'Content-Type': 'application/json' } });
+  }
   const cors = { 'Content-Type': 'application/json; charset=utf-8' };
 
   let body;
