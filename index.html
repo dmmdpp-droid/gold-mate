@@ -534,6 +534,14 @@ main {
   gap: 16px;
 }
 
+.paywall-box {
+  background: var(--paper);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
+}
+
 .paywall-title {
   font-family: var(--bebas);
   font-size: 28px;
@@ -1076,7 +1084,7 @@ footer {
 <footer>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
   <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);cursor:default;"></span>
-  <span class="ft-r">V 1.8.0 · 0630</span>
+  <span class="ft-r">V 1.8.2 · 0630</span>
 </footer>
 
 <script>
@@ -1665,32 +1673,8 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 }
 
 // ── 付费 / 激活码逻辑（支持到期）──
-const CODES = {
-  // 月付 30天
-  'TEST1DAY': 1,   // 测试用，1天（8位）
-  'TEST': 1,         // 超简测试码
-  'M-2026-K7X9Q': 30,
-  'M-2026-P3NWB': 30,
-  'M-2026-H8ZFT': 30,
-  'M-2026-R5YCJ': 30,
-  'M-2026-V2LMD': 30,
-  'M-2026-G6ATU': 30,
-  'M-2026-W4ESN': 30,
-  'M-2026-D9QPK': 30,
-  'M-2026-F1BXR': 30,
-  'M-2026-J7HVC': 30,
-  // 两年 730天
-  'Y-2026-A4KMP': 730,
-  'Y-2026-B8NQX': 730,
-  'Y-2026-C2RZT': 730,
-  'Y-2026-E6WSJ': 730,
-  'Y-2026-I3FYU': 730,
-  'Y-2026-L9GVD': 730,
-  'Y-2026-N5HBK': 730,
-  'Y-2026-Q7XCF': 730,
-  'Y-2026-S1PTW': 730,
-  'Y-2026-U4ZDR': 730,
-};
+// 注：旧版本本地激活码列表已移除（安全问题：明文暴露在前端）
+// 激活码验证统一走服务端 /api/activate，见 redeemCode() 函数
 
 function isPaid() {
   const expiry = localStorage.getItem('gold_expiry');
@@ -1829,7 +1813,7 @@ async function checkPaymentResult() {
         _polling = false;
         localStorage.removeItem('pending_order');
         localStorage.removeItem('pending_plan');
-        unlockByFingerprint(data.expiry, data.plan, data.code);
+        handlePaymentSuccess(data.expiry, data.plan, data.code, orderNo);
         return;
       }
     } catch(e) {}
@@ -1897,18 +1881,18 @@ function cancelPaymentWait() {
   hidePaywall();
 }
 
-function unlockByFingerprint(expiry, plan, code) {
+function handlePaymentSuccess(expiry, plan, code, orderNo) {
   const days = Math.round((expiry - Date.now()) / (24 * 60 * 60 * 1000));
-  localStorage.setItem('gold_unlocked', '1');
-  localStorage.setItem('gold_expiry', expiry.toString());
+
+  // 注：不在此处提前写入 gold_unlocked/gold_expiry
+  // 必须等手机号登录绑定成功后才真正解锁，避免用户跳过登录环节
   localStorage.removeItem('paid_code');
   localStorage.removeItem('paid_days');
   localStorage.removeItem('pending_order');
 
-  // 暂存激活码和到期信息，供登录成功后绑定使用
-  if (code) localStorage.setItem('_pending_code', code);
-  localStorage.setItem('_pending_expiry', expiry.toString());
-  localStorage.setItem('_pending_plan', plan);
+  // 暂存订单号，供登录成功后核验绑定使用（不再直接信任前端expiry/plan写入会员状态）
+  localStorage.setItem('_pending_order', orderNo || '');
+  localStorage.setItem('_pending_expiry_hint', expiry.toString()); // 仅用于UI显示"有效期"文案，不作为解锁依据
 
   const label = days >= 365 ? Math.round(days/365) + '年'
               : days >= 30  ? Math.round(days/30) + '个月'
@@ -1974,10 +1958,11 @@ async function sendSmsCode() {
   msg.textContent = '发送中…';
 
   try {
+    const fp = await getFingerprint();
     const res = await fetch('/api/sms-send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, fp }),
     });
     const data = await res.json();
 
@@ -2003,6 +1988,7 @@ async function sendSmsCode() {
       const reasonMap = {
         rate_limited: '操作过于频繁，请稍后再试',
         invalid_phone: '请输入正确的手机号',
+        fp_rate_limited: '本设备操作过于频繁，请稍后再试',
       };
       msg.textContent = reasonMap[data.reason] || '发送失败，请重试';
       btn.disabled = false;
@@ -2037,41 +2023,56 @@ async function submitPhoneLogin(forceAfterPay) {
 
   try {
     const fp = await getFingerprint();
+    const orderNo = forceAfterPay ? (localStorage.getItem('_pending_order') || '') : '';
+
     const res = await fetch('/api/sms-verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code, verifyId: window._smsVerifyId, fp }),
+      body: JSON.stringify({ phone, code, verifyId: window._smsVerifyId, fp, orderNo }),
     });
     const data = await res.json();
 
     if (!data.ok) {
       msg.style.color = 'var(--up)';
-      const reasonMap = { code_mismatch: '验证码错误，请重新输入', expired: '该会员已过期' };
+      const reasonMap = {
+        code_mismatch: '验证码错误，请重新输入',
+        expired: '该会员已过期',
+        order_not_found: '订单信息异常，请联系客服',
+        order_expired: '该笔订单已过期，请联系客服',
+      };
       msg.textContent = reasonMap[data.reason] || '登录失败，请重试';
       submitBtn.disabled = false;
       return;
     }
 
     if (data.found) {
-      // 找到已有会员记录，直接恢复
+      // 找到已有会员记录，服务端已校验有效，直接恢复
       localStorage.setItem('gold_unlocked', '1');
       localStorage.setItem('gold_expiry', data.expiry.toString());
       msg.style.color = 'var(--dn)';
       msg.textContent = '登录成功，会员已恢复';
       window._forceLoginActive = false;
       setTimeout(() => { hidePaywall(); location.reload(); }, 800);
-    } else if (forceAfterPay) {
-      // 支付成功后首次登录：绑定手机号到刚才的会员记录
-      const expiry = localStorage.getItem('_pending_expiry');
-      const plan = localStorage.getItem('_pending_plan');
-      await fetch('/api/sms-bind', {
+    } else if (forceAfterPay && data.bindToken) {
+      // 支付成功后首次登录：用一次性bindToken完成绑定，不再信任本地expiry/plan
+      const bindRes = await fetch('/api/sms-bind', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, plan, expiry: parseInt(expiry), fp }),
+        body: JSON.stringify({ bindToken: data.bindToken, fp }),
       });
-      localStorage.removeItem('_pending_code');
-      localStorage.removeItem('_pending_expiry');
-      localStorage.removeItem('_pending_plan');
+      const bindData = await bindRes.json();
+
+      if (!bindData.ok) {
+        msg.style.color = 'var(--up)';
+        msg.textContent = '绑定失败，请联系客服微信：goldmate888';
+        submitBtn.disabled = false;
+        return;
+      }
+
+      localStorage.setItem('gold_unlocked', '1');
+      localStorage.setItem('gold_expiry', bindData.expiry.toString());
+      localStorage.removeItem('_pending_order');
+      localStorage.removeItem('_pending_expiry_hint');
       msg.style.color = 'var(--dn)';
       msg.textContent = '登录成功，会员已激活';
       window._forceLoginActive = false;
@@ -2166,6 +2167,7 @@ function saveCost() {
 // 初始化付费/试用状态
 // 启动时用指纹验证服务端会员状态
 (async function verifyMembership() {
+  const beforeState = localStorage.getItem('gold_unlocked') === '1';
   try {
     const fp = await getFingerprint();
     const res = await fetch('/api/member', {
@@ -2178,12 +2180,19 @@ function saveCost() {
       // 服务端确认是会员，更新本地状态
       localStorage.setItem('gold_unlocked', '1');
       localStorage.setItem('gold_expiry', data.expiry.toString());
-    } else if (data.reason === 'expired') {
-      // 服务端确认已过期，清除本地会员状态
+    } else {
+      // 服务端明确返回"非会员"（无论是 expired 还是查无记录），
+      // 都应清除本地状态，防止用户手动伪造 localStorage 绕过验证
       localStorage.removeItem('gold_unlocked');
       localStorage.removeItem('gold_expiry');
     }
-    // 如果请求失败，保持本地状态不变（离线兼容）
+    // 注意：只有 fetch 本身抛异常（网络问题）才会进入 catch，此时保留本地状态做离线兼容
+
+    // 仅当会员状态确实发生变化时才刷新页面，避免无意义的UI跳变
+    const afterState = localStorage.getItem('gold_unlocked') === '1';
+    if (beforeState !== afterState) {
+      location.reload();
+    }
   } catch(e) {}
 })();
 
