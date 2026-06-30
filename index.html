@@ -1056,11 +1056,19 @@ footer {
     </div>
 
     <div id="paywall-msg" style="font-family:var(--sans);font-size:12px;text-align:center;min-height:16px;margin-bottom:4px;"></div>
-  <div class="code-row">
+
+    <!-- 激活码入口（隐藏，保留功能作为后台兜底） -->
+    <div class="code-row" style="display:none;">
       <input class="code-input" id="code-input" placeholder="已有激活码？输入此处" maxlength="20">
       <button class="code-btn" onclick="redeemCode()">激活</button>
     </div>
-    <div class="code-msg" id="code-msg"></div>
+    <div class="code-msg" id="code-msg" style="display:none;"></div>
+
+    <!-- 手机号登录入口 -->
+    <div style="text-align:center;margin-top:4px;">
+      <span onclick="showPhoneLogin()" style="font-family:var(--sans);font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">已有会员？手机号登录</span>
+    </div>
+
     <button class="paywall-dismiss" onclick="hidePaywall()">暂不升级，继续使用默认100克</button>
   </div>
 </div>
@@ -1068,7 +1076,7 @@ footer {
 <footer>
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
   <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);cursor:default;"></span>
-  <span class="ft-r">V 1.7.2 · 0629</span>
+  <span class="ft-r">V 1.8.0 · 0630</span>
 </footer>
 
 <script>
@@ -1751,6 +1759,7 @@ function hidePaywall() {
 }
 
 function handlePaywallBg(e) {
+  if (window._forceLoginActive) return; // 强制登录场景下点击背景不关闭
   if (e.target === document.getElementById('paywall')) hidePaywall();
 }
 
@@ -1896,35 +1905,187 @@ function unlockByFingerprint(expiry, plan, code) {
   localStorage.removeItem('paid_days');
   localStorage.removeItem('pending_order');
 
+  // 暂存激活码和到期信息，供登录成功后绑定使用
+  if (code) localStorage.setItem('_pending_code', code);
+  localStorage.setItem('_pending_expiry', expiry.toString());
+  localStorage.setItem('_pending_plan', plan);
+
   const label = days >= 365 ? Math.round(days/365) + '年'
               : days >= 30  ? Math.round(days/30) + '个月'
               : days + '天';
 
+  showPhoneLogin(true, label);
+}
+
+// 手机号登录/注册弹窗
+// forceAfterPay: 是否是支付成功后的强制登录场景
+function showPhoneLogin(forceAfterPay, label) {
+  window._forceLoginActive = !!forceAfterPay;
   const pw = document.getElementById('paywall');
+  const titleHtml = forceAfterPay
+    ? `<div style="font-family:var(--bebas);font-size:20px;letter-spacing:0.08em;color:var(--dn);text-align:center;margin-bottom:4px;">✓ 支付成功</div>
+       <div style="font-family:var(--sans);font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;">有效期 ${label}</div>`
+    : `<div style="font-family:var(--bebas);font-size:20px;letter-spacing:0.08em;color:var(--ink);text-align:center;margin-bottom:14px;">手机号登录</div>`;
+
   pw.innerHTML = `
     <div class="paywall-box" onclick="event.stopPropagation()" style="padding:20px 20px 24px;max-height:85vh;overflow-y:auto;">
-      <div style="font-family:var(--bebas);font-size:20px;letter-spacing:0.08em;color:var(--dn);text-align:center;margin-bottom:4px;">✓ 会员已激活</div>
-      <div style="font-family:var(--sans);font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;">有效期 ${label}</div>
-      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center;">您的专属激活码</div>
-      <div id="code-display" style="background:var(--rule);border-radius:8px;padding:12px;font-family:var(--bebas);font-size:20px;letter-spacing:0.1em;text-align:center;color:var(--ink);user-select:all;margin-bottom:10px;">${code || '—'}</div>
-      <div style="font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px;line-height:1.8;">📸 建议截图保存<br>或复制到备忘录 / 微信文件传输助手<br>换机后可重新输入激活码恢复会员</div>
-      <button class="paywall-btn" style="background:#07C160;margin-bottom:8px;padding:12px;" id="copy-code-btn">复制激活码</button>
-      <button class="paywall-btn" style="background:var(--ink);padding:12px;" onclick="hidePaywall();location.reload();">开始使用</button>
+      ${titleHtml}
+      <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);text-align:center;margin-bottom:16px;">请输入手机号，完成会员登录</div>
+
+      <input type="tel" id="phone-input" placeholder="请输入手机号" maxlength="11"
+        style="width:100%;padding:12px;border:1px solid var(--rule);border-radius:8px;font-family:var(--sans);font-size:14px;margin-bottom:10px;outline:none;">
+
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" id="sms-code-input" placeholder="请输入验证码" maxlength="6"
+          style="flex:1;padding:12px;border:1px solid var(--rule);border-radius:8px;font-family:var(--sans);font-size:14px;outline:none;">
+        <button id="send-code-btn" style="white-space:nowrap;padding:0 14px;border:1px solid var(--ink);border-radius:8px;background:none;font-family:var(--sans);font-size:12px;color:var(--ink);cursor:pointer;">获取验证码</button>
+      </div>
+
+      <div id="phone-login-msg" style="font-family:var(--sans);font-size:12px;text-align:center;min-height:16px;margin-bottom:10px;"></div>
+
+      <button class="paywall-btn" style="background:var(--ink);padding:12px;" id="phone-login-submit-btn">登录</button>
+      ${forceAfterPay ? '' : '<button class="paywall-dismiss" style="margin-top:8px;" onclick="hidePaywall()">取消</button>'}
     </div>`;
   pw.classList.add('show');
 
-  if (code) {
-    document.getElementById('copy-code-btn').addEventListener('click', function() {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(code).then(() => {
-          this.textContent = '✓ 已复制';
-        }).catch(() => {
-          this.textContent = '请长按激活码复制';
-        });
-      } else {
-        this.textContent = '请长按激活码复制';
-      }
+  document.getElementById('send-code-btn').addEventListener('click', sendSmsCode);
+  document.getElementById('phone-login-submit-btn').addEventListener('click', function() {
+    submitPhoneLogin(forceAfterPay);
+  });
+}
+
+let _smsCountdown = 0;
+async function sendSmsCode() {
+  const phoneInput = document.getElementById('phone-input');
+  const msg = document.getElementById('phone-login-msg');
+  const btn = document.getElementById('send-code-btn');
+  const phone = phoneInput.value.trim();
+
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '请输入正确的手机号';
+    return;
+  }
+
+  if (_smsCountdown > 0) return;
+
+  btn.disabled = true;
+  msg.style.color = 'var(--tx2)';
+  msg.textContent = '发送中…';
+
+  try {
+    const res = await fetch('/api/sms-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
     });
+    const data = await res.json();
+
+    if (data.ok) {
+      msg.style.color = 'var(--dn)';
+      msg.textContent = '验证码已发送，请查收短信';
+      window._smsVerifyId = data.verifyId;
+
+      _smsCountdown = 60;
+      const tick = () => {
+        if (_smsCountdown > 0) {
+          btn.textContent = _smsCountdown + 's';
+          _smsCountdown--;
+          setTimeout(tick, 1000);
+        } else {
+          btn.textContent = '获取验证码';
+          btn.disabled = false;
+        }
+      };
+      tick();
+    } else {
+      msg.style.color = 'var(--up)';
+      const reasonMap = {
+        rate_limited: '操作过于频繁，请稍后再试',
+        invalid_phone: '请输入正确的手机号',
+      };
+      msg.textContent = reasonMap[data.reason] || '发送失败，请重试';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '网络错误，请重试';
+    btn.disabled = false;
+  }
+}
+
+async function submitPhoneLogin(forceAfterPay) {
+  const phone = document.getElementById('phone-input').value.trim();
+  const code = document.getElementById('sms-code-input').value.trim();
+  const msg = document.getElementById('phone-login-msg');
+  const submitBtn = document.getElementById('phone-login-submit-btn');
+
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '请输入正确的手机号';
+    return;
+  }
+  if (!code) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '请输入验证码';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  msg.style.color = 'var(--tx2)';
+  msg.textContent = '登录中…';
+
+  try {
+    const fp = await getFingerprint();
+    const res = await fetch('/api/sms-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code, verifyId: window._smsVerifyId, fp }),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      msg.style.color = 'var(--up)';
+      const reasonMap = { code_mismatch: '验证码错误，请重新输入', expired: '该会员已过期' };
+      msg.textContent = reasonMap[data.reason] || '登录失败，请重试';
+      submitBtn.disabled = false;
+      return;
+    }
+
+    if (data.found) {
+      // 找到已有会员记录，直接恢复
+      localStorage.setItem('gold_unlocked', '1');
+      localStorage.setItem('gold_expiry', data.expiry.toString());
+      msg.style.color = 'var(--dn)';
+      msg.textContent = '登录成功，会员已恢复';
+      window._forceLoginActive = false;
+      setTimeout(() => { hidePaywall(); location.reload(); }, 800);
+    } else if (forceAfterPay) {
+      // 支付成功后首次登录：绑定手机号到刚才的会员记录
+      const expiry = localStorage.getItem('_pending_expiry');
+      const plan = localStorage.getItem('_pending_plan');
+      await fetch('/api/sms-bind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, plan, expiry: parseInt(expiry), fp }),
+      });
+      localStorage.removeItem('_pending_code');
+      localStorage.removeItem('_pending_expiry');
+      localStorage.removeItem('_pending_plan');
+      msg.style.color = 'var(--dn)';
+      msg.textContent = '登录成功，会员已激活';
+      window._forceLoginActive = false;
+      setTimeout(() => { hidePaywall(); location.reload(); }, 800);
+    } else {
+      // 非支付场景，且未找到记录
+      msg.style.color = 'var(--up)';
+      msg.textContent = '该手机号暂无会员记录';
+      submitBtn.disabled = false;
+    }
+  } catch (e) {
+    msg.style.color = 'var(--up)';
+    msg.textContent = '网络错误，请重试';
+    submitBtn.disabled = false;
   }
 }
 
@@ -2132,11 +2293,14 @@ if (localStorage.getItem('pending_order')) {
 // 用户从微信/其他App切回来时自动触发轮询
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState !== 'visible') return;
-  // 如果有待显示的激活码，直接展示
-  const paidCode = localStorage.getItem('paid_code');
-  const paidDays = localStorage.getItem('paid_days');
-  if (paidCode && paidDays) {
-    showPaymentSuccess(paidCode, parseInt(paidDays));
+  // 如果有未完成登录的支付，重新弹出强制登录
+  const pendingExpiry = localStorage.getItem('_pending_expiry');
+  if (pendingExpiry && !isPaid()) {
+    const days = Math.round((parseInt(pendingExpiry) - Date.now()) / (24 * 60 * 60 * 1000));
+    const label = days >= 365 ? Math.round(days/365) + '年'
+                : days >= 30  ? Math.round(days/30) + '个月'
+                : days + '天';
+    showPhoneLogin(true, label);
     return;
   }
   // 否则轮询支付结果
@@ -2145,11 +2309,14 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
-// 页面加载时检查是否有已支付待激活的码
-const _savedCode = localStorage.getItem('paid_code');
-const _savedDays = localStorage.getItem('paid_days');
-if (_savedCode && _savedDays && !isPaid()) {
-  showPaymentSuccess(_savedCode, parseInt(_savedDays));
+// 页面加载时检查是否有未完成登录的支付（支付成功但手机号登录未完成）
+const _pendingExpiry = localStorage.getItem('_pending_expiry');
+if (_pendingExpiry && !isPaid()) {
+  const days = Math.round((parseInt(_pendingExpiry) - Date.now()) / (24 * 60 * 60 * 1000));
+  const label = days >= 365 ? Math.round(days/365) + '年'
+              : days >= 30  ? Math.round(days/30) + '个月'
+              : days + '天';
+  showPhoneLogin(true, label);
 }
 
 requestAnimationFrame(() => {
