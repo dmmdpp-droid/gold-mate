@@ -1,7 +1,5 @@
 import { md5 } from './_md5.js';
 
-const PID = '2026062112580447';
-const KEY = 'D5fT7jP2xN9rZ4cB1kM6vQ0sH3gY6888';
 const ZPAY_URL = 'https://zpayz.cn/mapi.php';
 
 const PLANS = {
@@ -9,17 +7,23 @@ const PLANS = {
   yearly:  { name: '黄金换算助手会员两年卡', money: '0.02', days: 730 },
 };
 
-function makeSign(params) {
+function makeSign(params, key) {
   const sorted = Object.keys(params)
     .filter(k => k !== 'sign' && k !== 'sign_type' && params[k] !== '' && params[k] != null)
     .sort()
     .map(k => `${k}=${params[k]}`)
     .join('&');
-  return md5(sorted + KEY);
+  return md5(sorted + key);
 }
 
 export async function onRequestPost({ request, env }) {
   const cors = { 'Content-Type': 'application/json; charset=utf-8' };
+
+  const PID = env.ZPAY_PID;
+  const KEY = env.ZPAY_KEY;
+  if (!PID || !KEY) {
+    return new Response(JSON.stringify({ ok: false, reason: 'config_missing' }), { status: 500, headers: cors });
+  }
 
   let body;
   try { body = await request.json(); } catch {
@@ -50,7 +54,7 @@ export async function onRequestPost({ request, env }) {
     param: body.plan + '|' + fp, // 格式：plan|fingerprint
     sign_type: 'MD5',
   };
-  params.sign = makeSign(params);
+  params.sign = makeSign(params, KEY);
 
   const form = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => form.append(k, v));
