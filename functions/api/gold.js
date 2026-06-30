@@ -1,15 +1,20 @@
-const API_KEY  = 'goldapi-b7a466ff677b69f624b3a87413eab82a-io';
 const CACHE_TTL = 12 * 60 * 60;
 
 export async function onRequest(context) {
+  const { request, env } = context;
+  const API_KEY = env.GOLDAPI_KEY;
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Content-Type': 'application/json',
   };
 
-  if (context.request.method === 'OPTIONS') {
+  if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!API_KEY) {
+    return new Response(JSON.stringify({ error: 'config missing', price: null }), { status: 500, headers: corsHeaders });
   }
 
   try {
