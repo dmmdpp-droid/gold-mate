@@ -16,6 +16,12 @@
 
 import { parseCookies, SESSION_COOKIE_NAME, buildSessionCookie } from './_session.js';
 
+/**
+ * V1.8.13 变更：reason:'expired' 的响应里附带 expiry 字段（具体到期时间戳），
+ * 供前端区分"老会员到期"和"全新用户试用到期"，展示带具体日期的续费提示，
+ * 而不是笼统的"试用已到期"。见《会员收费与登录逻辑全面自查报告.md》发现3。
+ */
+
 export async function onRequestPost({ request, env }) {
   const cors = { 'Content-Type': 'application/json; charset=utf-8' };
 
@@ -44,7 +50,7 @@ export async function onRequestPost({ request, env }) {
               ok: true, expiry: data.expiry, plan: data.plan,
             }), { headers: { ...cors, 'Set-Cookie': buildSessionCookie(sessionId) } });
           }
-          return new Response(JSON.stringify({ ok: false, reason: 'expired' }), { headers: cors });
+          return new Response(JSON.stringify({ ok: false, reason: 'expired', expiry: data.expiry }), { headers: cors });
         }
       }
     } catch {}
@@ -60,7 +66,7 @@ export async function onRequestPost({ request, env }) {
 
     const data = JSON.parse(raw);
     if (Date.now() > data.expiry) {
-      return new Response(JSON.stringify({ ok: false, reason: 'expired' }), { headers: cors });
+      return new Response(JSON.stringify({ ok: false, reason: 'expired', expiry: data.expiry }), { headers: cors });
     }
 
     return new Response(JSON.stringify({
