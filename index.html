@@ -1087,9 +1087,14 @@ footer {
     <div id="ios-tip" style="display:none;">
       <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2.2;">
         <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">iPhone / iPad</div>
-        1. 点击底部中间的 <strong>分享</strong> 按钮 <span class="pwa-bounce" style="display:inline-block;font-size:15px;border:1px solid #ccc;padding:1px 4px;border-radius:4px;">⎙</span><br>
+        <!-- V1.8.15：iOS 26起Safari工具栏改版，分享按钮不再直接可见，
+             需要先点"···"菜单。不做UA版本嗅探（不够稳定），改成一段话
+             同时覆盖新旧两种布局，跟安卓那边"留有余地"的处理思路一致。 -->
+        1. 点击 <strong>分享</strong> 按钮 <span class="pwa-bounce" style="display:inline-block;font-size:15px;border:1px solid #ccc;padding:1px 4px;border-radius:4px;">⎙</span>
+        （若没有直接看到，先点右上角 <strong>「···」</strong> 再选择 <strong>「分享」</strong>）<br>
         2. 向下滑，找到 <strong>「添加到主屏幕」</strong><br>
-        3. 右上角点 <strong>「添加」</strong> 完成 ✓
+        3. 确认 <strong>「以网页应用打开」</strong> 已开启（更接近App体验）<br>
+        4. 点 <strong>「添加」</strong> 完成 ✓
       </div>
     </div>
 
