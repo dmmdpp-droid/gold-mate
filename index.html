@@ -611,6 +611,79 @@ main {
   margin-left: 2px;
 }
 
+@keyframes pwaBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.pwa-bounce { animation: pwaBounce 1s ease-in-out infinite; }
+
+/* 手绘感描边箭头动画：指向屏幕真实的浏览器/微信菜单按钮位置（如"···"），
+   而不是页面内某个虚构的按钮——那个按钮本身在系统UI层，页面画不到，
+   只能画一条箭头"指过去"，让用户自己抬头找。见微信内打开引导wechat-tip。 */
+.wechat-arrow-wrap {
+  position: absolute;
+  top: 0; right: 0;
+  width: 140px;
+  height: 220px;
+  pointer-events: none;
+  z-index: 1;
+}
+.wechat-arrow-path {
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: drawWechatArrow 2.6s ease-in-out infinite;
+}
+@keyframes drawWechatArrow {
+  0%   { stroke-dashoffset: 260; opacity: 0; }
+  12%  { opacity: 1; }
+  55%  { stroke-dashoffset: 0; opacity: 1; }
+  80%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* 常驻"添加到桌面"分区（位于正文与页脚之间，不受弹窗提醒的复访逻辑影响，
+   只在检测到已安装/用户手动确认已添加时才会隐藏） */
+.pwa-persistent-section {
+  width: 100%;
+  max-width: 480px;
+  padding: 22px 20px;
+  border-top: 3px double var(--rule);
+  text-align: center;
+}
+.pwa-persistent-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.pwa-persistent-desc {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+.pwa-persistent-btn {
+  padding: 11px 32px;
+  background: var(--dn);
+  color: var(--paper);
+  border: 2px solid var(--paper);
+  border-radius: 9999px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(17,16,16,0.18), 0 0 0 1px var(--rule);
+}
+.pwa-persistent-confirm {
+  display: block;
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 /* PWA 安装提示条 */
 .pwa-banner {
   display: none;
@@ -984,24 +1057,37 @@ footer {
 
 <!-- 安装引导弹窗 -->
 <div class="paywall" id="install-guide" onclick="closeInstallGuide(event)">
-  <div class="paywall-card">
-    <div class="paywall-title">添加到手机桌面</div>
 
-    <!-- 微信内打开提示（优先显示） -->
-    <div id="wechat-tip" style="display:none;background:#FFFBE8;border-radius:10px;padding:14px 14px 10px;border-left:3px solid var(--gold);">
-      <div style="font-family:var(--sans);font-size:12px;color:var(--ink);font-weight:600;margin-bottom:8px;">📢 检测到您在微信中打开</div>
-      <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2;">
-        微信内无法直接保存到桌面<br>
-        请点击右上角 <strong style="font-size:15px;">···</strong> → 选择<strong>「在浏览器打开」</strong><br>
-        再点击右上角「桌面」按钮完成添加
-      </div>
+  <!-- 微信内打开提示：浮在半透明遮罩上，不占用下方卡片空间，
+       文案直接引导操作，不做"检测到"这类说明性文字。
+       这一步和"添加到桌面"是两次不同页面访问里发生的事——用户此刻还困在
+       微信里，"添加到桌面"这个动作在微信内置浏览器里根本不存在，所以这里
+       只展示"跳出去"这一步，不展示下方iOS/Android的添加桌面步骤，避免同
+       时展示一个用户当下完全没法操作的步骤。用户真正用系统浏览器重新打开
+       页面后，isWechat()会自然判定为false，届时会看到"添加到桌面"这一步。 -->
+  <div id="wechat-tip" style="display:none;position:absolute;top:18%;left:0;right:0;text-align:center;padding:0 32px;">
+    <div style="font-family:var(--sans);font-size:16px;color:var(--paper);font-weight:600;line-height:1.8;">
+      点击右上角 <span style="font-size:19px;">···</span><br>
+      选择「在浏览器打开」
     </div>
+  </div>
+  <div id="wechat-close-btn" onclick="closeInstallGuide()" style="display:none;position:absolute;top:20px;left:20px;font-family:var(--sans);font-size:22px;color:var(--paper);cursor:pointer;line-height:1;">×</div>
+
+  <div class="wechat-arrow-wrap" id="wechat-arrow" style="display:none;">
+    <svg width="140" height="220" viewBox="0 0 140 220" style="position:absolute;bottom:40px;right:10px;">
+      <path class="wechat-arrow-path" d="M 20 200 C 40 140, 30 90, 70 55 C 90 38, 100 30, 108 18"
+        fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 108 18 L 96 22 M 108 18 L 104 30" fill="none" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="paywall-card" id="install-guide-card">
+    <div class="paywall-title">添加到手机桌面</div>
 
     <!-- iOS 引导 -->
     <div id="ios-tip" style="display:none;">
       <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2.2;">
         <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">iPhone / iPad</div>
-        1. 点击底部中间的 <strong>分享</strong> 按钮 <span style="font-size:15px;border:1px solid #ccc;padding:1px 4px;border-radius:4px;">⎙</span><br>
+        1. 点击底部中间的 <strong>分享</strong> 按钮 <span class="pwa-bounce" style="display:inline-block;font-size:15px;border:1px solid #ccc;padding:1px 4px;border-radius:4px;">⎙</span><br>
         2. 向下滑，找到 <strong>「添加到主屏幕」</strong><br>
         3. 右上角点 <strong>「添加」</strong> 完成 ✓
       </div>
@@ -1011,14 +1097,16 @@ footer {
     <div id="android-tip" style="display:none;">
       <div style="font-family:var(--sans);font-size:12px;color:var(--ink2);line-height:2.2;">
         <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">Android 手机</div>
-        1. 点击浏览器右上角 <strong>⋮</strong> 菜单<br>
-        2. 选择 <strong>「添加到主屏幕」</strong><br>
-           或 <strong>「安装应用」</strong><br>
+        1. 点击浏览器菜单（图标可能是 <strong>⋮</strong> 竖点、<strong>≡</strong> 横线，或写着「更多」）<br>
+        2. 找到 <strong>「添加到主屏幕」</strong> 或 <strong>「安装应用」</strong><br>
         3. 确认即可 ✓
       </div>
       <button id="android-install-btn" class="paywall-btn" style="margin-top:14px;display:none;" onclick="installPWA()">一键添加到桌面</button>
     </div>
 
+    <div style="text-align:center;margin-top:6px;margin-bottom:8px;">
+      <span onclick="confirmAlreadyInstalled()" style="font-family:var(--sans);font-size:11px;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer;">已经添加过了？不再提示</span>
+    </div>
     <button class="paywall-dismiss" onclick="closeInstallGuide()">关闭</button>
   </div>
 </div>
@@ -1079,6 +1167,13 @@ footer {
 
     <button class="paywall-dismiss" onclick="hidePaywall()">暂不升级，继续使用默认100克</button>
   </div>
+</div>
+
+<div class="pwa-persistent-section" id="pwa-persistent-section" style="display:none;">
+  <div class="pwa-persistent-title">加到桌面，快速访问</div>
+  <div class="pwa-persistent-desc">不用再从公众号或聊天记录里找入口<br>像App一样随时打开使用</div>
+  <button class="pwa-persistent-btn" onclick="showInstallGuide()">添加到桌面</button>
+  <span class="pwa-persistent-confirm" onclick="confirmAlreadyInstalled()">已经添加过了？</span>
 </div>
 
 <footer>
@@ -1595,15 +1690,25 @@ function showInstallGuide() {
   const guide = document.getElementById('install-guide');
   // 重置所有提示
   document.getElementById('wechat-tip').style.display   = 'none';
+  document.getElementById('wechat-arrow').style.display = 'none';
+  document.getElementById('wechat-close-btn').style.display = 'none';
+  document.getElementById('install-guide-card').style.display = '';
   document.getElementById('ios-tip').style.display      = 'none';
   document.getElementById('android-tip').style.display  = 'none';
   document.getElementById('android-install-btn').style.display = 'none';
 
   const inWechat = isWechat();
 
-  // 微信内始终显示提示
+  // 微信内：只展示"先跳出微信"这一步，不展示下方"添加到桌面"的卡片内容——
+  // 这个动作在微信内置浏览器里根本没法操作，同时展示只会让用户困惑。
+  // 用户真正用系统浏览器重新打开页面后会自然看到"添加到桌面"那一步。
   if (inWechat) {
     document.getElementById('wechat-tip').style.display = 'block';
+    document.getElementById('wechat-arrow').style.display = 'block';
+    document.getElementById('wechat-close-btn').style.display = 'block';
+    document.getElementById('install-guide-card').style.display = 'none';
+    guide.classList.add('show');
+    return;
   }
 
   // 再叠加系统引导
@@ -1627,6 +1732,21 @@ function closeInstallGuide(e) {
 }
 
 // ── PWA 安装逻辑 ──
+// V1.8.14 变更（常驻底部分区 + 弹窗复访机制 + 双重防骚扰判断）：
+//   1. 新增 pwa-persistent-section：位于正文与页脚之间的常驻入口，不受弹窗
+//      的复访节奏影响，只在"确认已安装"时才隐藏，见 updatePersistentSection()
+//   2. pwa_dismissed 从一次性布尔开关改为时间戳（pwa_dismissed_at），弹窗关闭
+//      后不是永久不再出现，而是间隔一定天数（iOS更短，因为localStorage本身
+//      就有7天ITP清理窗口；Android更长）后再次提示，见 shouldShowPwaPopup()
+//   3. 新增 pwa_installed_confirmed 标记，由三种情况共同维护，构成"自动判断
+//      +手动兜底"的双重防骚扰机制：
+//        (a) 页面加载时检测到 isStandalone（真机已安装状态）
+//        (b) appinstalled 事件触发（不管从哪个入口装的都能识别）
+//        (c) 用户在常驻分区或安装引导弹窗里手动点"已经添加过了"
+//      这个标记一旦为真，常驻分区和弹窗都会永久不再出现，不区分是哪种方式
+//      确认的
+//   4. 弹窗触发时机延迟到页面加载4秒后（给用户一点时间先看到金价），
+//      不再是加载/beforeinstallprompt一触发就立刻弹
 let deferredPrompt = null;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
@@ -1634,12 +1754,49 @@ const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
 const _inWechat = /micromessenger/i.test(navigator.userAgent);
 
+const PWA_POPUP_INTERVAL_DAYS = { ios: 10, android: 90 };
+
+function shouldShowPwaPopup(platform) {
+  if (localStorage.getItem('pwa_installed_confirmed')) return false;
+  const dismissedAt = localStorage.getItem('pwa_dismissed_at');
+  if (!dismissedAt) return true; // 从未关闭过，应该显示
+  const days = PWA_POPUP_INTERVAL_DAYS[platform] || 90;
+  return Date.now() - parseInt(dismissedAt) >= days * 24 * 60 * 60 * 1000;
+}
+
+function updatePersistentSection() {
+  const section = document.getElementById('pwa-persistent-section');
+  if (!section) return;
+  section.style.display = (isStandalone || localStorage.getItem('pwa_installed_confirmed'))
+    ? 'none' : 'block';
+}
+
+function confirmAlreadyInstalled() {
+  localStorage.setItem('pwa_installed_confirmed', '1');
+  const section = document.getElementById('pwa-persistent-section');
+  if (section) section.style.display = 'none';
+  document.getElementById('pwa-banner').classList.remove('show');
+  closeInstallGuide();
+}
+
+window.addEventListener('appinstalled', () => {
+  // 不管用户是从常驻分区/弹窗的按钮装的，还是自己用浏览器地址栏装的，
+  // 都能正确识别"已装成功"，永久关闭所有提示入口
+  localStorage.setItem('pwa_installed_confirmed', '1');
+  document.getElementById('pwa-banner').classList.remove('show');
+  updatePersistentSection();
+});
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  // 微信内不弹，已弹过不再弹
-  if (!isStandalone && !_inWechat && !localStorage.getItem('pwa_dismissed')) {
-    document.getElementById('pwa-banner').classList.add('show');
+  // 微信内不弹弹窗（常驻分区会提示微信场景下走install-guide里的引导）
+  if (!isStandalone && !_inWechat && shouldShowPwaPopup('android')) {
+    setTimeout(() => {
+      if (!isStandalone && !localStorage.getItem('pwa_installed_confirmed')) {
+        document.getElementById('pwa-banner').classList.add('show');
+      }
+    }, 4000);
   }
 });
 
@@ -1654,19 +1811,25 @@ function installPWA() {
 }
 
 function dismissPWA() {
-  localStorage.setItem('pwa_dismissed', '1');
+  localStorage.setItem('pwa_dismissed_at', Date.now().toString());
   document.getElementById('pwa-banner').classList.remove('show');
 }
 
-// iOS：显示手动添加引导（微信内不弹，已弹过不再弹）
-if (isIOS && !isStandalone && !_inWechat && !localStorage.getItem('pwa_dismissed')) {
+// iOS：显示手动添加引导（微信内不弹，按复访间隔判断是否该再次提示）
+if (isIOS && !isStandalone && !_inWechat && shouldShowPwaPopup('ios')) {
   const banner = document.getElementById('pwa-banner');
   document.getElementById('pwa-desc').textContent =
     '点击底部分享按钮 → 选择「添加到主屏幕」，像 App 一样使用黄金换算助手。';
   document.getElementById('pwa-install-btn').textContent = '知道了';
   document.getElementById('pwa-install-btn').onclick = dismissPWA;
-  setTimeout(() => banner.classList.add('show'), 1500);
+  setTimeout(() => {
+    if (!localStorage.getItem('pwa_installed_confirmed')) {
+      banner.classList.add('show');
+    }
+  }, 4000);
 }
+
+updatePersistentSection();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
