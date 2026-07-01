@@ -23,6 +23,15 @@
  *   天数被叠加两次。
  */
 
+/**
+ * V1.8.8 变更（下发服务端会话Cookie）：
+ *   绑定成功后，除了写入 phone:{phone} 记录，同时下发一个长效会话Cookie，
+ *   作为比设备指纹更可靠的身份锚点（不受Safari ITP对localStorage的7天清理
+ *   规则影响，详见 _session.js 顶部说明）。
+ */
+
+import { createSessionCookieForPhone } from './_session.js';
+
 const PLAN_DAYS = { monthly: 30, yearly: 730 }; // 需与 pay.js / notify.js 的 PLANS 保持一致
 
 export async function onRequestPost({ request, env }) {
@@ -72,7 +81,9 @@ export async function onRequestPost({ request, env }) {
       if (phoneRawCheck) {
         const data = JSON.parse(phoneRawCheck);
         await env.GOLD_CODES.delete(tokenKey); // token仍需作废，防止继续被使用
-        return new Response(JSON.stringify({ ok: true, expiry: data.expiry, plan: data.plan }), { headers: cors });
+        const sessionCookie = await createSessionCookieForPhone(env, phone);
+        const respHeaders = sessionCookie ? { ...cors, 'Set-Cookie': sessionCookie } : cors;
+        return new Response(JSON.stringify({ ok: true, expiry: data.expiry, plan: data.plan }), { headers: respHeaders });
       }
     }
 
@@ -106,7 +117,9 @@ export async function onRequestPost({ request, env }) {
     // 用完即焚，防止 token 被重复使用
     await env.GOLD_CODES.delete(tokenKey);
 
-    return new Response(JSON.stringify({ ok: true, expiry: stackedExpiry, plan }), { headers: cors });
+    const sessionCookie = await createSessionCookieForPhone(env, phone);
+    const respHeaders = sessionCookie ? { ...cors, 'Set-Cookie': sessionCookie } : cors;
+    return new Response(JSON.stringify({ ok: true, expiry: stackedExpiry, plan }), { headers: respHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, reason: 'kv_error' }), { headers: cors });
   }
