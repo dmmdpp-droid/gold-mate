@@ -1,0 +1,24 @@
+# Cloudflare Pages静态资源缓存头配置
+#
+# 背景：Cloudflare Pages官方文档说明，静态资源在CDN边缘节点最长可缓存一周，
+# 每次部署后，具体某个用户请求会落在哪个边缘节点是不确定的，如果那个节点
+# 还没刷新，用户可能拿到长达一周前的旧版本文件——这跟浏览器本地的Service
+# Worker缓存是完全独立的两层，即使sw.js自身的版本号逻辑写得再正确，也没法
+# 解决"CDN边缘节点本身还没刷新"这个问题。
+#
+# 这里明确给几个"每次发版都可能变化、且直接决定用户能不能看到最新代码"的
+# 关键文件设置 no-cache，强制浏览器和CDN每次都向源站重新验证是否有更新，
+# 而不是盲目使用缓存副本。图标这类几乎不变的资源不受影响，仍走Cloudflare
+# 默认的缓存策略。
+
+/sw.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
+
+/manifest.json
+  Cache-Control: no-cache
