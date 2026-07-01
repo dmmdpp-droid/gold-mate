@@ -1825,10 +1825,25 @@ async function checkPaymentResult() {
       setTimeout(poll, 5000);
     } else {
       _polling = false;
-      localStorage.removeItem('pending_order');
-      localStorage.removeItem('pending_plan');
-      // 超时：关闭等待弹窗，恢复正常付费墙
-      hidePaywall();
+      // 注意：不删除 pending_order/pending_plan —— ZPay回调重试间隔最长可能到
+      // 半小时到一小时，2分钟内没等到结果是正常场景，不是异常。保留订单号
+      // 才能让下次打开页面/切回页面时的自动恢复逻辑（见文件底部
+      // visibilitychange监听、页面加载检查）继续轮询，避免用户已经成功
+      // 支付却再也找不到这笔订单，无法完成注册。
+      const pw = document.getElementById('paywall');
+      if (pw) {
+        pw.innerHTML = `
+          <div class="paywall-box" onclick="event.stopPropagation()">
+            <div class="paywall-title">支付确认时间较长</div>
+            <div style="font-family:var(--sans);font-size:13px;color:var(--ink2);text-align:center;line-height:1.7;margin-bottom:18px;">
+              你的支付可能仍在处理中，不用重新付款。<br>
+              请稍后重新打开本页面查看结果，<br>
+              或直接用刚才的手机号登录查询。
+            </div>
+            <button class="paywall-btn" style="background:var(--ink);padding:12px;margin-bottom:8px;width:100%;" onclick="showPhoneLogin(false)">已有会员？手机号登录</button>
+            <button class="paywall-dismiss" onclick="cancelPaymentWait()">放弃，返回</button>
+          </div>`;
+      }
     }
   };
 
@@ -1891,7 +1906,12 @@ function handlePaymentSuccess(expiry, plan, code, orderNo) {
 
   // 暂存订单号，供登录成功后核验绑定使用（不再直接信任前端expiry/plan写入会员状态）
   localStorage.setItem('_pending_order', orderNo || '');
-  localStorage.setItem('_pending_expiry_hint', expiry.toString()); // 仅用于UI显示"有效期"文案，不作为解锁依据
+  // 注：这个key同时被两处依赖：(1) 本函数label变量的计算来源；
+  // (2) 文件底部 visibilitychange监听/页面加载检查 用它判断"支付成功
+  // 但还没完成手机号登录绑定"，从而自动重新弹出强制登录框。此前这里
+  // 曾误写成 _pending_expiry_hint（多了_hint后缀），导致读取端的两处
+  // 判断逻辑从未真正生效过，是纯粹的命名笔误，现已统一。
+  localStorage.setItem('_pending_expiry', expiry.toString());
 
   const label = days >= 365 ? Math.round(days/365) + '年'
               : days >= 30  ? Math.round(days/30) + '个月'
@@ -2022,7 +2042,14 @@ async function submitPhoneLogin(forceAfterPay) {
 
   try {
     const fp = await getFingerprint();
-    const orderNo = forceAfterPay ? (localStorage.getItem('_pending_order') || '') : '';
+    // 注：不再严格限定在forceAfterPay场景才带订单号——只要本地还留着
+    // 未核验的订单线索（不管是刚支付成功的_pending_order，还是超时后
+    // 保留下来的pending_order），普通手动登录也应该带上，这样即使用户
+    // 隔了很久才想起来手动登录，也能把订单正确核验、避免"已支付但找不到
+    // 订单号"的问题（见《会员收费与登录逻辑全面自查报告.md》发现1）。
+    const orderNo = localStorage.getItem('_pending_order')
+      || localStorage.getItem('pending_order')
+      || '';
 
     const res = await fetch('/api/sms-verify', {
       method: 'POST',
@@ -2071,7 +2098,7 @@ async function submitPhoneLogin(forceAfterPay) {
       localStorage.setItem('gold_unlocked', '1');
       localStorage.setItem('gold_expiry', bindData.expiry.toString());
       localStorage.removeItem('_pending_order');
-      localStorage.removeItem('_pending_expiry_hint');
+      localStorage.removeItem('_pending_expiry');
       msg.style.color = 'var(--dn)';
       msg.textContent = '登录成功，会员已激活';
       window._forceLoginActive = false;
