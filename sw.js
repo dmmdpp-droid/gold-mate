@@ -1,4 +1,9 @@
-const CACHE = 'gold-assistant-v1';
+// ⚠️ 每次发布新版本（index.html/manifest.json等有改动）时，必须把这里的版本号
+// 也同步递增，否则用户设备上缓存的旧版本页面不会被清理更新——activate事件里
+// "清理旧缓存"的逻辑，只有在CACHE这个名字真的变化时才会生效，名字不变的话浏览器
+// 会认为"缓存没变"，旧内容会一直被cache-first策略提供给用户，不会自动刷新到最新
+// 代码。建议跟CHANGELOG.md的版本号保持一致，方便一眼对应。
+const CACHE = 'gold-assistant-v188';
 const ASSETS = [
   '/',
   '/index.html',
