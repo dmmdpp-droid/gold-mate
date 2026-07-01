@@ -53,10 +53,23 @@ export async function onRequestGet({ request, env }) {
     // 1. 签名验证
     const expectedSign = makeSign(p, KEY);
     if (expectedSign !== p.sign) {
-      // 记录异常回调，便于排查（不写入会员数据）
+      // 安全诊断：只记录KEY的长度和首尾各2位（掩码），排查是否因复制粘贴带入
+      // 了多余空格/换行符导致密钥与ZPay后台实际值不一致，但不暴露完整密钥。
+      const keyDiag = {
+        length: KEY.length,
+        head: KEY.slice(0, 2),
+        tail: KEY.slice(-2),
+        hasLeadingSpace: /^\s/.test(KEY),
+        hasTrailingSpace: /\s$/.test(KEY),
+      };
+      const signedString = NOTIFY_SIGN_FIELDS
+        .filter(k => p[k] !== '' && p[k] != null)
+        .sort()
+        .map(k => `${k}=${p[k]}`)
+        .join('&');
       try {
         await env.GOLD_CODES.put(`debug:bad_sign:${Date.now()}`, JSON.stringify({
-          time: new Date().toISOString(), params: p, expectedSign
+          time: new Date().toISOString(), params: p, expectedSign, keyDiag, signedString
         }), { expirationTtl: 86400 });
       } catch {}
       return new Response('sign error');
