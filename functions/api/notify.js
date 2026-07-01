@@ -14,6 +14,24 @@
  *   现在任何异常都会被捕获并写入 debug:crash:{timestamp}，方便直接在KV
  *   面板里看到完整报错堆栈，而不必依赖 Cloudflare Observability（该功能
  *   需要额外在 wrangler 配置里开启，本项目未启用）。
+ *
+ * V1.8.7 变更（会员到期时间叠加，防止二次购买覆盖缩短会员权益）：
+ *   写入 member:{fp} 指纹会员记录时，改为在"现有到期时间"（若已过期则从
+ *   "现在"算起）之上叠加本次购买的天数，而不是无条件用本次购买的到期时间
+ *   覆盖。例如用户还剩700天，又买了一张30天月卡，新到期时间是"700天后+30
+ *   天"，而不是被直接覆盖成30天后。
+ *
+ *   order:{out_trade_no} 记录里的 expiry 字段保持不变，仍然是"仅这一笔
+ *   购买本身对应的到期时间"（面值），作为这笔订单的历史/审计信息，不代表
+ *   用户实际叠加后的到期时间——真正生效的叠加结果只体现在 member:{fp} 和
+ *   （后续手机号绑定环节的）phone:{phone} 记录里。
+ *   新增 bound:false 字段，标记这笔订单是否已经被 sms-bind.js 用于手机号
+ *   绑定，防止同一笔订单被重复核验/绑定导致天数被叠加两次（见 sms-verify.js
+ *   / sms-bind.js 的对应改动）。
+ *
+ *   result:{out_trade_no}（供前端支付成功后轮询展示）里的 expiry 改为使用
+ *   叠加后的指纹会员到期时间，让用户支付成功页看到的是"我现在实际到期时间"，
+ *   而不是单纯这一笔购买的面值到期时间，避免用户以为自己"只买到了这么多天"。
  */
 
 import { md5 } from './_md5.js';
@@ -99,7 +117,8 @@ export async function onRequestGet({ request, env }) {
     }
 
     const days = PLAN_DAYS[plan] || 730;
-    const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+    // rawExpiry：仅这一笔购买本身对应的到期时间（面值），写入 order 记录用于审计展示
+    const rawExpiry = Date.now() + days * 24 * 60 * 60 * 1000;
     const until = Date.now() + 365 * 24 * 60 * 60 * 1000; // 激活码1年内有效
     const prefix = plan === 'monthly' ? 'M' : 'Y';
 
@@ -116,21 +135,33 @@ export async function onRequestGet({ request, env }) {
       days, until, used: false, order: p.out_trade_no
     }));
 
-    // 2. 写入指纹会员记录
+    // 2. 写入指纹会员记录（叠加：在现有到期时间/现在两者取更晚的基础上，加上本次购买天数）
+    let fpStackedExpiry = rawExpiry;
     if (fp) {
-      await env.GOLD_CODES.put(`member:${fp}`, JSON.stringify({
-        plan, days, expiry, order: p.out_trade_no, time: Date.now()
+      const memberKey = `member:${fp}`;
+      let existingExpiry = 0;
+      try {
+        const existingMemberRaw = await env.GOLD_CODES.get(memberKey);
+        if (existingMemberRaw) {
+          const existingMember = JSON.parse(existingMemberRaw);
+          existingExpiry = existingMember.expiry || 0;
+        }
+      } catch {}
+      fpStackedExpiry = Math.max(existingExpiry, Date.now()) + days * 24 * 60 * 60 * 1000;
+
+      await env.GOLD_CODES.put(memberKey, JSON.stringify({
+        plan, days, expiry: fpStackedExpiry, order: p.out_trade_no, time: Date.now()
       }));
     }
 
-    // 3. 写入订单记录
+    // 3. 写入订单记录（expiry保持为本次购买面值，bound标记是否已被手机号绑定使用过）
     await env.GOLD_CODES.put(orderKey, JSON.stringify({
-      fp, plan, money: p.money, expiry, code, time: Date.now()
+      fp, plan, money: p.money, expiry: rawExpiry, code, time: Date.now(), bound: false
     }));
 
-    // 4. 写入轮询结果（同时包含激活码和到期时间）
+    // 4. 写入轮询结果（展示叠加后的指纹会员到期时间，而不是单笔购买面值）
     await env.GOLD_CODES.put(`result:${p.out_trade_no}`, JSON.stringify({
-      fp, plan, days, expiry, code
+      fp, plan, days, expiry: fpStackedExpiry, code
     }));
 
     return new Response('success');
