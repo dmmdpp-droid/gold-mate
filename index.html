@@ -1681,7 +1681,9 @@ function isPaid() {
   if (!expiry) return false;
   const now = Date.now();
   if (now > parseInt(expiry)) {
-    // 已到期，清除状态
+    // 已到期：先记录最后到期时间，供"续费"文案使用（区分"老会员到期"和
+    // "全新用户试用到期"，避免两者看到一模一样的提示），再清除会员状态
+    localStorage.setItem('gold_last_expiry', expiry);
     localStorage.removeItem('gold_unlocked');
     localStorage.removeItem('gold_expiry');
     return false;
@@ -1723,6 +1725,7 @@ function unlock(days) {
   const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
   localStorage.setItem('gold_unlocked', '1');
   localStorage.setItem('gold_expiry', expiry.toString());
+  localStorage.removeItem('gold_last_expiry');
   localStorage.removeItem('paid_code');
   localStorage.removeItem('paid_days');
   const inp = document.getElementById('pos-qty');
@@ -2075,6 +2078,7 @@ async function submitPhoneLogin(forceAfterPay) {
       // 找到已有会员记录，服务端已校验有效，直接恢复
       localStorage.setItem('gold_unlocked', '1');
       localStorage.setItem('gold_expiry', data.expiry.toString());
+      localStorage.removeItem('gold_last_expiry');
       msg.style.color = 'var(--dn)';
       msg.textContent = '登录成功，会员已恢复';
       window._forceLoginActive = false;
@@ -2097,6 +2101,7 @@ async function submitPhoneLogin(forceAfterPay) {
 
       localStorage.setItem('gold_unlocked', '1');
       localStorage.setItem('gold_expiry', bindData.expiry.toString());
+      localStorage.removeItem('gold_last_expiry');
       localStorage.removeItem('_pending_order');
       localStorage.removeItem('_pending_expiry');
       msg.style.color = 'var(--dn)';
@@ -2206,9 +2211,15 @@ function saveCost() {
       // 服务端确认是会员，更新本地状态
       localStorage.setItem('gold_unlocked', '1');
       localStorage.setItem('gold_expiry', data.expiry.toString());
+      localStorage.removeItem('gold_last_expiry'); // 已经是有效会员，清掉旧的"到期记录"
     } else {
       // 服务端明确返回"非会员"（无论是 expired 还是查无记录），
-      // 都应清除本地状态，防止用户手动伪造 localStorage 绕过验证
+      // 都应清除本地状态，防止用户手动伪造 localStorage 绕过验证。
+      // 如果服务端明确告知是"到期"（而非查无记录），顺带记下最后到期时间，
+      // 供"续费"文案使用，区分"老会员到期"和"全新用户"两种场景。
+      if (data.reason === 'expired' && data.expiry) {
+        localStorage.setItem('gold_last_expiry', data.expiry.toString());
+      }
       localStorage.removeItem('gold_unlocked');
       localStorage.removeItem('gold_expiry');
     }
@@ -2304,9 +2315,22 @@ function saveCost() {
     if (costLock) costLock.style.display = '';
 
     // footer 显示到期提示
+    // 区分"老会员到期"和"全新用户试用到期"：如果本地记录着最后一次
+    // 到期时间（gold_last_expiry，见 isPaid()/verifyMembership()），
+    // 说明这台设备曾经是付费会员，不该跟全新用户看到一样的"试用已到期"，
+    // 而应该看到带具体日期的续费提示（参考订阅制行业"Grace Period"惯例，
+    // 见《会员收费与登录逻辑全面自查报告.md》发现3）。
     const memberStatusEl = document.getElementById('member-status');
     if (memberStatusEl) {
-      memberStatusEl.textContent = '试用已到期 · 点击升级';
+      const lastExpiry = localStorage.getItem('gold_last_expiry');
+      const lastExpiryTs = lastExpiry ? parseInt(lastExpiry) : NaN;
+      if (lastExpiry && !isNaN(lastExpiryTs)) {
+        const led = new Date(lastExpiryTs);
+        const ledStr = led.getFullYear() + '/' + (led.getMonth()+1) + '/' + led.getDate();
+        memberStatusEl.textContent = '会员已于 ' + ledStr + ' 到期 · 点击续费';
+      } else {
+        memberStatusEl.textContent = '试用已到期 · 点击升级';
+      }
       memberStatusEl.style.color = 'var(--up)';
       memberStatusEl.style.cursor = 'pointer';
       memberStatusEl.style.textDecoration = 'underline';
