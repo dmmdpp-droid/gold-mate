@@ -24,6 +24,14 @@
  */
 
 import { callAliyunApi } from './_aliyun-sign.js';
+import { createSessionCookieForPhone } from './_session.js';
+
+/**
+ * V1.8.8 变更（下发服务端会话Cookie）：
+ *   凡是"确认了这台设备对应哪个手机号"的场景（订单已绑定过、普通登录成功），
+ *   都下发一个长效会话Cookie，作为比设备指纹更可靠的身份锚点，详见
+ *   _session.js 顶部说明。
+ */
 
 const ENDPOINT = 'dypnsapi.aliyuncs.com';
 
@@ -91,9 +99,11 @@ export async function onRequestPost({ request, env }) {
         const phoneRaw = await env.GOLD_CODES.get(phoneKey).catch(() => null);
         if (phoneRaw) {
           const data = JSON.parse(phoneRaw);
+          const sessionCookie = await createSessionCookieForPhone(env, phone);
+          const respHeaders = sessionCookie ? { ...cors, 'Set-Cookie': sessionCookie } : cors;
           return new Response(JSON.stringify({
             ok: true, found: true, expiry: data.expiry, plan: data.plan,
-          }), { headers: cors });
+          }), { headers: respHeaders });
         }
         // 理论上不应出现"订单已绑定但手机号查无记录"，兜底按已绑定处理
         return new Response(JSON.stringify({ ok: false, reason: 'already_bound' }), { headers: cors });
@@ -119,9 +129,11 @@ export async function onRequestPost({ request, env }) {
         data.fp = fp;
         await env.GOLD_CODES.put(phoneKey, JSON.stringify(data));
       }
+      const sessionCookie = await createSessionCookieForPhone(env, phone);
+      const respHeaders = sessionCookie ? { ...cors, 'Set-Cookie': sessionCookie } : cors;
       return new Response(JSON.stringify({
         ok: true, found: true, expiry: data.expiry, plan: data.plan,
-      }), { headers: cors });
+      }), { headers: respHeaders });
     }
 
     // 普通登录场景，未找到记录，也没有订单号
