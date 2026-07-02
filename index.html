@@ -891,24 +891,24 @@ main {
    两者视觉权重对等。分隔线从原来的"上方"改到"下方"——因为.pnl-card自己
    顶部本来就有一条分隔线，紧挨着再加一条容易显得线条堆在一起，挪到下面
    跟持仓量/持仓均价那几行分开更合理。 */
+/* V1.8.35：改回"标签左、金额右"同一行的排布，加大跟上方分区的间距 */
 .pnl-mkt-section {
-  margin-top: 18px;
+  margin-top: 34px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--rule2);
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
 .pnl-mkt {
-  display: block;
   font-family: var(--serif);
   font-size: 11px;
   color: var(--muted);
   letter-spacing: 0.06em;
-  margin-bottom: 6px;
 }
 
 .pnl-mkt-val {
-  display: block;
   font-family: var(--bebas);
   font-size: clamp(36px, 10vw, 52px);
   letter-spacing: 0.01em;
@@ -927,13 +927,26 @@ main {
 /* ═══════════════════════════
    FOOTER
 ═══════════════════════════ */
-footer {
+/* V1.8.35：页脚拆成两个独立分区——会员区（问题反馈+会员状态）沿用原来的
+   双线分隔样式；版本号单独一区，用更轻的单线分隔，不跟会员区的粗分隔线
+   叠在一起显得太重。 */
+.member-zone {
   width: 100%;
   max-width: 480px;
   border-top: 3px double var(--rule);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+}
+
+footer {
+  width: 100%;
+  max-width: 480px;
+  border-top: 1px solid var(--rule2);
+  padding: 10px 24px;
+  display: flex;
+  justify-content: center;
   align-items: baseline;
 }
 
@@ -1074,12 +1087,12 @@ footer {
     </div>
     <div class="pos-row">
       <span class="pos-lbl">持仓量</span>
-      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="1" min="1" max="1000000" readonly onclick="showPaywall()" oninput="saveQty();updatePos()">
+      <input class="pos-inp locked" type="number" id="pos-qty" value="100" step="1" min="1" max="1000000" readonly onclick="showPaywall()" oninput="updatePos()" onblur="saveQty();updatePos()">
       <span class="pos-sfx">克 <span class="lock-icon" id="lock-icon">🔒</span></span>
     </div>
     <div class="pos-row">
       <span class="pos-lbl">持仓均价</span>
-      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="10" max="2000" oninput="saveCost();updatePos()" onchange="saveCost();updatePos()">
+      <input class="pos-inp" type="number" id="pos-cost" value="1000" step="1" min="10" max="2000" oninput="updatePos()" onblur="saveCost();updatePos()">
       <span class="pos-sfx">CNY/克 <span class="lock-icon" id="cost-lock-icon" style="display:none;">🔒</span></span>
     </div>
   </div>
@@ -1212,9 +1225,12 @@ footer {
   <span class="pwa-persistent-confirm" onclick="confirmAlreadyInstalled()">已经添加过了？</span>
 </div>
 
-<footer>
+<div class="member-zone">
   <button onclick="copyFeedback()" style="background:none;border:none;cursor:pointer;font-family:var(--serif);font-size:10px;color:var(--muted);padding:0;text-decoration:underline;text-underline-offset:3px;">问题反馈</button>
   <span id="member-status" style="font-size:10px;color:var(--muted);font-family:var(--serif);cursor:default;"></span>
+</div>
+
+<footer>
   <span class="ft-r">V ···</span>
 </footer>
 
@@ -2440,7 +2456,12 @@ function saveCost() {
     inp.removeAttribute('readonly');
     inp.classList.remove('locked');
     inp.onclick = null;
-    inp.oninput = function() { saveQty(); updatePos(); };
+    // V1.8.35修复：原来每次输入都立刻调用saveQty()做min/max校验，
+    // 用户删空最后一位数字准备重新输入时，会在那一瞬间被强制改回min值，
+    // 导致永远没法真正清空输入框。改成输入时只做实时预览计算，真正的
+    // 校验和保存挪到失去焦点(onblur)时再做，让用户能自由删除、重新输入。
+    inp.oninput = function() { updatePos(); };
+    inp.onblur = function() { saveQty(); updatePos(); };
     document.getElementById('lock-icon').style.display = 'none';
 
     // 恢复已保存的克数
