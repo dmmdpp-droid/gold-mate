@@ -2576,15 +2576,24 @@ requestAnimationFrame(() => {
   <!-- 内容区域：靠右上方 -->
   <div style="position:absolute;top:80px;right:16px;width:220px;">
 
-    <!-- 虚线弧形箭头：从内容区右上方指向 ··· -->
-    <svg style="position:absolute;top:-68px;right:4px;width:70px;height:72px;" viewBox="0 0 70 72">
-      <path d="M60,68 C62,44 58,20 38,8" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="6,5" stroke-linecap="round"/>
-      <polygon points="32,4 44,6 36,14" fill="white"/>
+    <!-- 虚线弧形箭头：指向屏幕右上方"···"所在的大致区域。
+         "···"是微信自己原生工具栏上的元素，不在本页面DOM里，无法拿到
+         真实像素坐标，只能凭经验估算大致位置，且会因设备/微信版本/
+         状态栏高度、以及系统翻译工具栏等因素叠加而有偏差。这里把箭头
+         画得更长、弧度更缓，传达"往这个方向看"的大致指向，而不是精确
+         戳向一个具体的点，减少因位置估算偏差导致"指不准"的观感。
+         叠加轻微的浮动动画（复用.pwa-bounce同款做法），据查证的开源
+         方案实战经验，动态箭头对安装/跳转转化率有明显帮助。 -->
+    <svg class="pwa-bounce" style="position:absolute;top:-88px;right:-6px;width:90px;height:92px;" viewBox="0 0 90 92">
+      <path d="M78,88 C82,58 76,26 44,6" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="6,5" stroke-linecap="round"/>
+      <polygon points="38,2 50,4 42,12" fill="white"/>
     </svg>
 
-    <!-- 第一步：文字左，图标右 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;flex:1;">
+    <!-- 第一步：文字与图标靠拢在一起（原先用space-between+flex:1把两者
+         强行拉开到容器两端，文字内容短的时候中间会空出一大段距离，
+         改成flex-end+去掉flex:1，让两者紧挨着显示） -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:10px;">
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;text-align:right;white-space:nowrap;">
         <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-bottom:2px;">第一步</div>
         点击右上角
       </div>
@@ -2598,22 +2607,25 @@ requestAnimationFrame(() => {
     </div>
 
     <!-- 竖线 -->
-    <div style="width:1.5px;height:14px;background:rgba(255,255,255,0.25);margin:0 auto 10px 8px;"></div>
+    <div style="width:1.5px;height:14px;background:rgba(255,255,255,0.25);margin:0 8px 10px auto;"></div>
 
-    <!-- 第二步：文字左，图标右 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px;">
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;flex:1;">
+    <!-- 第二步：同样改为靠拢布局；文案改为直接对应微信弹出菜单里的真实
+         按钮文字"在浏览器打开"，减少用户需要自己脑内翻译一遍的负担 -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:28px;">
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;text-align:right;">
         <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-bottom:2px;">第二步</div>
-        在弹出菜单中<br>点击浏览器打开
+        在弹出菜单中<br>点击「在浏览器打开」
       </div>
       <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:24px;">
         🌐
       </div>
     </div>
 
-    <!-- 底部提示 -->
+    <!-- 底部提示：原文案"体验完整功能"语气偏可选升级，但实际是无法关闭
+         的强制跳转，容易让用户以为不跳出去也能凑合看看。改成更笃定的
+         表述，明确这是必须的一步，减少犹豫。 -->
     <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.65);text-align:center;">
-      在手机浏览器中打开，体验完整功能
+      需要在手机浏览器中打开才能使用
     </div>
 
   </div>
