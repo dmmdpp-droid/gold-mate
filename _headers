@@ -22,3 +22,9 @@
 
 /manifest.json
   Cache-Control: no-cache
+
+# V1.8.20：页脚版本号现在会在页面加载时实时读取这个文件的最新内容，
+# 必须保证这个文件本身也不被缓存，否则"自动读取版本号"这套机制会被
+# 缓存卡住，重蹈V1.8.9~V1.8.18版本号显示落后的覆辙。
+/CHANGELOG.md
+  Cache-Control: no-cache
