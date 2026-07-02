@@ -629,8 +629,8 @@ main {
    合并在一起，而不是另外单独加一条静态transform，否则动画自带的transform
    会直接覆盖掉静态旋转，两者没法同时生效。 */
 @keyframes wechatArrowBounce {
-  0%, 100% { transform: rotate(30deg) translateY(0); }
-  50% { transform: rotate(30deg) translateY(-3px); }
+  0%, 100% { transform: rotate(60deg) translateY(0); }
+  50% { transform: rotate(60deg) translateY(-3px); }
 }
 .wechat-arrow-bounce { animation: wechatArrowBounce 0.5s ease-in-out infinite; }
 
@@ -2613,8 +2613,8 @@ requestAnimationFrame(() => {
          居中排列；第一行补上「···」提示具体要找的符号；第二行字号从21px
          调小到18px。 -->
     <div style="text-align:center;margin-bottom:28px;">
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;">
-        点击右上角「···」
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);margin-bottom:8px;">
+        点击右上角「...」
       </div>
       <div style="font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:white;line-height:1.4;">
         选择在浏览器 🌐 中打开
