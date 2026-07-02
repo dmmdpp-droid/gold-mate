@@ -2589,43 +2589,22 @@ requestAnimationFrame(() => {
       <polygon points="34,2 44,4 37,11" fill="white"/>
     </svg>
 
-    <!-- 第一步：文字与图标靠拢在一起（原先用space-between+flex:1把两者
-         强行拉开到容器两端，文字内容短的时候中间会空出一大段距离，
-         改成flex-end+去掉flex:1，让两者紧挨着显示） -->
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:10px;">
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;text-align:right;white-space:nowrap;">
-        <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-bottom:2px;">第一步</div>
+    <!-- V1.8.24：参照一个实际案例重新设计文字部分（箭头保持V1.8.23不变，
+         这次只改文字）。原先用两个独立圆形图标(···/🌐)去模拟真实按钮样子，
+         导致"假图标位置对不对"和"箭头指向准不准"这两个坐标都要精确，
+         出错概率是叠加的（V1.8.14~V1.8.23期间箭头反复被指出"指不准"、
+         "被裁切"，部分原因也在于此）。参照案例的做法是把"图标"这件事
+         完全交给箭头处理，文字只用一个嵌入句子里的小符号做辅助说明，
+         不再额外制造一个需要精确定位的假图标。同时文字改为两行明显的
+         主次层级：第一行小字铺垫，第二行大字加粗才是真正要执行的动作，
+         而不是像原来那样两行字号权重相同、没有视觉重点。 -->
+    <div style="text-align:right;margin-bottom:28px;">
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;">
         点击右上角
       </div>
-      <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="20" height="5" viewBox="0 0 20 5">
-          <circle cx="2.5" cy="2.5" r="2.5" fill="white"/>
-          <circle cx="10" cy="2.5" r="2.5" fill="white"/>
-          <circle cx="17.5" cy="2.5" r="2.5" fill="white"/>
-        </svg>
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:white;line-height:1.4;">
+        选择在浏览器 🌐 中打开
       </div>
-    </div>
-
-    <!-- 竖线 -->
-    <div style="width:1.5px;height:14px;background:rgba(255,255,255,0.25);margin:0 8px 10px auto;"></div>
-
-    <!-- 第二步：同样改为靠拢布局；文案改为直接对应微信弹出菜单里的真实
-         按钮文字"在浏览器打开"，减少用户需要自己脑内翻译一遍的负担 -->
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:28px;">
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:white;line-height:1.5;text-align:right;">
-        <div style="color:rgba(255,255,255,0.5);font-size:10px;margin-bottom:2px;">第二步</div>
-        在弹出菜单中<br>点击「在浏览器打开」
-      </div>
-      <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:24px;">
-        🌐
-      </div>
-    </div>
-
-    <!-- 底部提示：原文案"体验完整功能"语气偏可选升级，但实际是无法关闭
-         的强制跳转，容易让用户以为不跳出去也能凑合看看。改成更笃定的
-         表述，明确这是必须的一步，减少犹豫。 -->
-    <div style="font-family:'Noto Sans SC',sans-serif;font-size:11px;color:rgba(255,255,255,0.65);text-align:center;">
-      需要在手机浏览器中打开才能使用
     </div>
 
   </div>
