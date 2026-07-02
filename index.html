@@ -886,24 +886,34 @@ main {
   transition: width .3s ease, background .3s;
 }
 
-.pnl-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-top: 8px;
+/* "当前市值"独立成区：上方细分隔线+留白，跟pnl-card顶部的分隔线呼应，
+   数字用--bebas字体放大、固定用--dn深绿色突出（市值本身不是涨跌概念，
+   不跟着profit/loss的红绿逻辑走，单纯作为一个需要被强调的重要数字）。
+   字号不超过.pnl-pct（那才是页面里最大的数字），保持"最大的百分比→
+   较大的涨跌金额→中等的市值"这个既有的层级关系。 */
+.pnl-mkt-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule2);
 }
 
 .pnl-mkt {
+  display: block;
   font-family: var(--serif);
   font-size: 11px;
   color: var(--muted);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
 }
 
 .pnl-mkt-val {
+  display: block;
   font-family: var(--bebas);
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  color: var(--ink2);
+  font-size: clamp(28px, 8vw, 36px);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  font-feature-settings: 'tnum';
+  color: var(--dn);
 }
 
 .pnl-eyebrow-lbl {
@@ -1056,7 +1066,7 @@ footer {
           <div class="pnl-bar-fill" id="pnl-bar"></div>
         </div>
       </div>
-      <div class="pnl-bottom">
+      <div class="pnl-mkt-section">
         <span class="pnl-mkt">当前市值</span>
         <span class="pnl-mkt-val" id="pnl-mkt">—</span>
       </div>
