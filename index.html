@@ -886,15 +886,16 @@ main {
   transition: width .3s ease, background .3s;
 }
 
-/* "当前市值"独立成区：上方细分隔线+留白，跟pnl-card顶部的分隔线呼应，
-   数字用--bebas字体放大、固定用--dn深绿色突出（市值本身不是涨跌概念，
-   不跟着profit/loss的红绿逻辑走，单纯作为一个需要被强调的重要数字）。
-   字号不超过.pnl-pct（那才是页面里最大的数字），保持"最大的百分比→
-   较大的涨跌金额→中等的市值"这个既有的层级关系。 */
+/* V1.8.34："当前市值"改为靠右对齐，字号/字重跟.pnl-amount（浮亏浮盈金额）
+   完全一致（同样用clamp(36px,10vw,52px)、同样的line-height/letter-spacing），
+   两者视觉权重对等。分隔线从原来的"上方"改到"下方"——因为.pnl-card自己
+   顶部本来就有一条分隔线，紧挨着再加一条容易显得线条堆在一起，挪到下面
+   跟持仓量/持仓均价那几行分开更合理。 */
 .pnl-mkt-section {
   margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--rule2);
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule2);
+  text-align: right;
 }
 
 .pnl-mkt {
@@ -909,9 +910,9 @@ main {
 .pnl-mkt-val {
   display: block;
   font-family: var(--bebas);
-  font-size: clamp(28px, 8vw, 36px);
-  letter-spacing: 0.02em;
-  line-height: 1;
+  font-size: clamp(36px, 10vw, 52px);
+  letter-spacing: 0.01em;
+  line-height: 0.9;
   font-feature-settings: 'tnum';
   color: var(--dn);
 }
