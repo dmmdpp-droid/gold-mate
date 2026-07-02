@@ -2598,14 +2598,20 @@ requestAnimationFrame(() => {
          不再额外制造一个需要精确定位的假图标。同时文字改为两行明显的
          主次层级：第一行小字铺垫，第二行大字加粗才是真正要执行的动作，
          而不是像原来那样两行字号权重相同、没有视觉重点。 -->
-    <div style="text-align:right;margin-bottom:28px;">
+    <!-- V1.8.25：文字加一块实色背景衬底，不再依赖"猜哪里没东西"来保证
+         可读性——页面本身的大号价格数字位置会随汇率、持仓数据变化，之前
+         纯文字直接叠在半透明遮罩上，实测被底下的"$4070"价格数字顶穿，
+         叠在一起很乱。加背景块之后，不管底下页面显示什么内容，文字都能
+         稳定清晰可读，不用再精确计算这片区域"应该"是空的。 -->
+    <div style="text-align:right;margin-bottom:28px;background:rgba(0,0,0,0.55);border-radius:10px;padding:10px 14px;display:inline-block;float:right;">
       <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;">
         点击右上角
       </div>
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:white;line-height:1.4;">
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:white;line-height:1.4;white-space:nowrap;">
         选择在浏览器 🌐 中打开
       </div>
     </div>
+    <div style="clear:both;"></div>
 
   </div>
 </div>
