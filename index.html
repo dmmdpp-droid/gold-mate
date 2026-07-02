@@ -2584,7 +2584,7 @@ requestAnimationFrame(() => {
          戳向一个具体的点，减少因位置估算偏差导致"指不准"的观感。
          叠加轻微的浮动动画（复用.pwa-bounce同款做法），据查证的开源
          方案实战经验，动态箭头对安装/跳转转化率有明显帮助。 -->
-    <svg class="pwa-bounce" style="position:absolute;top:-60px;right:-6px;width:80px;height:82px;" viewBox="0 0 80 82">
+    <svg class="pwa-bounce" style="position:absolute;top:-60px;right:-40px;width:80px;height:82px;" viewBox="0 0 80 82">
       <path d="M69,78 C73,52 68,23 39,5" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="6,5" stroke-linecap="round"/>
       <polygon points="34,2 44,4 37,11" fill="white"/>
     </svg>
@@ -2598,20 +2598,18 @@ requestAnimationFrame(() => {
          不再额外制造一个需要精确定位的假图标。同时文字改为两行明显的
          主次层级：第一行小字铺垫，第二行大字加粗才是真正要执行的动作，
          而不是像原来那样两行字号权重相同、没有视觉重点。 -->
-    <!-- V1.8.25：文字加一块实色背景衬底，不再依赖"猜哪里没东西"来保证
-         可读性——页面本身的大号价格数字位置会随汇率、持仓数据变化，之前
-         纯文字直接叠在半透明遮罩上，实测被底下的"$4070"价格数字顶穿，
-         叠在一起很乱。加背景块之后，不管底下页面显示什么内容，文字都能
-         稳定清晰可读，不用再精确计算这片区域"应该"是空的。 -->
-    <div style="text-align:right;margin-bottom:28px;background:rgba(0,0,0,0.55);border-radius:10px;padding:10px 14px;display:inline-block;float:right;">
+    <!-- V1.8.26：去掉背景衬底，改回纯文字叠在半透明遮罩上（与底下页面
+         内容偶尔重叠，实际观感影响不大，不需要额外背景块）；文字改为
+         居中排列；第一行补上「···」提示具体要找的符号；第二行字号从21px
+         调小到18px。 -->
+    <div style="text-align:center;margin-bottom:28px;">
       <div style="font-family:'Noto Sans SC',sans-serif;font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;">
-        点击右上角
+        点击右上角「···」
       </div>
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:21px;font-weight:700;color:white;line-height:1.4;white-space:nowrap;">
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:700;color:white;line-height:1.4;">
         选择在浏览器 🌐 中打开
       </div>
     </div>
-    <div style="clear:both;"></div>
 
   </div>
 </div>
