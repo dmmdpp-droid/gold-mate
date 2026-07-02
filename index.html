@@ -623,6 +623,16 @@ main {
 
 @keyframes pwaBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 .pwa-bounce { animation: pwaBounce 1s ease-in-out infinite; }
+/* V1.8.28：微信引导箭头专用动画（不复用.pwa-bounce，避免连带影响iOS引导
+   里共用同一个class的分享按钮图标）。速度是.pwa-bounce的两倍（0.5s vs 1s），
+   并叠加顺时针旋转30度——旋转角度写进keyframe的transform里跟浮动效果
+   合并在一起，而不是另外单独加一条静态transform，否则动画自带的transform
+   会直接覆盖掉静态旋转，两者没法同时生效。 */
+@keyframes wechatArrowBounce {
+  0%, 100% { transform: rotate(30deg) translateY(0); }
+  50% { transform: rotate(30deg) translateY(-3px); }
+}
+.wechat-arrow-bounce { animation: wechatArrowBounce 0.5s ease-in-out infinite; }
 
 /* 手绘感描边箭头动画：指向屏幕真实的浏览器/微信菜单按钮位置（如"···"），
    而不是页面内某个虚构的按钮——那个按钮本身在系统UI层，页面画不到，
@@ -2574,7 +2584,7 @@ requestAnimationFrame(() => {
 <div id="wechat-mask" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:9999;touch-action:none;">
 
   <!-- 内容区域：靠右上方 -->
-  <div style="position:absolute;top:80px;right:70px;width:220px;">
+  <div style="position:absolute;top:80px;right:70px;width:280px;">
 
     <!-- 虚线弧形箭头：指向屏幕右上方"···"所在的大致区域。
          "···"是微信自己原生工具栏上的元素，不在本页面DOM里，无法拿到
@@ -2584,7 +2594,7 @@ requestAnimationFrame(() => {
          戳向一个具体的点，减少因位置估算偏差导致"指不准"的观感。
          叠加轻微的浮动动画（复用.pwa-bounce同款做法），据查证的开源
          方案实战经验，动态箭头对安装/跳转转化率有明显帮助。 -->
-    <svg class="pwa-bounce" style="position:absolute;top:-60px;right:-40px;width:80px;height:82px;" viewBox="0 0 80 82">
+    <svg class="wechat-arrow-bounce" style="position:absolute;top:-60px;right:-40px;width:80px;height:82px;" viewBox="0 0 80 82">
       <path d="M69,78 C73,52 68,23 39,5" stroke="white" stroke-width="2.5" fill="none" stroke-dasharray="6,5" stroke-linecap="round"/>
       <polygon points="34,2 44,4 37,11" fill="white"/>
     </svg>
