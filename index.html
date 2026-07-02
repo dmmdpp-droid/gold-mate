@@ -2630,5 +2630,27 @@ requestAnimationFrame(() => {
 })();
 </script>
 
+<script>
+// V1.8.20：页脚版本号改为运行时从CHANGELOG.md动态读取，不再手写死在HTML里。
+// 背景：此前版本号写死在这个span里，需要每次发版都手动同步，V1.8.9到V1.8.18
+// 连续9个版本都忘了同步，被误判成缓存/部署问题排查了很久。CHANGELOG.md顶部
+// 条目本身是唯一从未漏过更新的地方，所以让页脚直接读它，彻底消除"忘记手动
+// 同步"这个人为失误的可能性，而不是继续指望"记得更细心"。
+// 取不到/解析失败时，静默保留HTML里写的兜底文字，不影响页面其他功能。
+(function() {
+  fetch('/CHANGELOG.md', { cache: 'no-store' })
+    .then(res => res.ok ? res.text() : null)
+    .then(text => {
+      if (!text) return;
+      const match = text.match(/##\s*V\s*([\d.]+)\s*·\s*(\d{4})(\d{2})(\d{2})/);
+      if (!match) return;
+      const [, version, , mm, dd] = match;
+      const el = document.querySelector('.ft-r');
+      if (el) el.textContent = `V ${version} · ${mm}${dd}`;
+    })
+    .catch(() => {}); // 静默失败，保留兜底文字
+})();
+</script>
+
 </body>
 </html>
